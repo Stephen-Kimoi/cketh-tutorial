@@ -1,0 +1,27 @@
+{
+  "canisters": {
+    "cketh_tutorial_backend": {
+      "candid": "src/cketh_tutorial_backend/cketh_tutorial_backend.did",
+      "package": "cketh_tutorial_backend",
+      "type": "rust"
+    },
+    "cketh_tutorial_frontend": {
+      "dependencies": [
+        "cketh_tutorial_backend"
+      ],
+      "source": [
+        "src/cketh_tutorial_frontend/dist"
+      ],
+      "type": "assets",
+      "workspace": "cketh_tutorial_frontend"
+    }
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": ""
+    }
+  },
+  "output_env_file": ".env",
+  "version": 1
+}

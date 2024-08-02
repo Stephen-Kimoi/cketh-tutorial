@@ -1,0 +1,5 @@
+[workspace]
+members = [
+    "src/cketh_tutorial_backend"
+]
+resolver = "2"
