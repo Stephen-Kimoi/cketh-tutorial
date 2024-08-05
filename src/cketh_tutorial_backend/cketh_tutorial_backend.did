@@ -1,3 +1,15 @@
+type LogEntry = record { topics : vec text; address : text };
+type Result = variant { Ok : VerifiedTransactionDetails; Err : text };
+type VerifiedTransactionDetails = record {
+  to : text;
+  status : text;
+  transaction_hash : text;
+  from : text;
+  logs : vec LogEntry;
+  block_number : text;
+};
 service : {
-    "greet": (text) -> (text) query;
+  canister_deposit_principal : () -> (text) query;
+  get_receipt : (text) -> (text);
+  verify_transaction : (text) -> (Result);
 }
