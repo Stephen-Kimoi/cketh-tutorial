@@ -475,7 +475,7 @@ async fn verify_transaction(hash: String) -> Result<receipt::VerifiedTransaction
 
 When you're done with that you can redeploy all the canisters (including evm_rpc canister) locally by running the command 
 
-``bash 
+```bash 
 ./did.sh && dfx generate cketh_starter_backend && dfx deploy evm_rpc && dfx deploy cketh_starter_backend
 ```
 ### Frontend Code for Verification
