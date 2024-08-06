@@ -234,10 +234,15 @@ const changeTransactionHashHandler = (e) => {
 The first step is to create a function that converts a Principal ID into a subaccount. This subaccount is necessary for depositing ETH.
 
 ### Backend Code
+First of all you need to add the follwing dependency to your ``Cargo.toml`` file inside the backend directory 
+```toml
+b3_utils = { version = "0.11.0", features = ["ledger"] }
+```
+
+Then you can insert the rust function to your ``lib.rs`` file 
 
 ```rust
 use b3_utils::{vec_to_hex_string_with_0x, Subaccount};
-use candid::Principal;
 
 #[ic_cdk::query]
 fn canister_deposit_principal() -> String {
@@ -250,6 +255,8 @@ fn canister_deposit_principal() -> String {
 ```
 
 This function generates a deposit address that you can use to mint ckETH to the new subaccount.
+
+You can now test the function by calling the ``Get Deposit Address`` button on your frontend
 
 ## Step 2: Minting ckETH Tokens
 
@@ -315,8 +322,85 @@ After minting ckETH, it's crucial to verify the transaction on-chain. This invol
 - The logs must include the correct deposit principal.
 
 ### Backend Code
+Install the following packages in your ``cargo.toml`` file by copy pasting the follwing content: 
+```toml 
+serde = { version = "1", features = ["derive"] }
+serde_json = "1.0"
+```
 
-First, test the transaction by getting the receipt:
+Copy the contents from the ``recept.rs`` file and paste them into a similar file on your directory 
+
+Then import the module in your ``lib.rs`` file like this: 
+```rust 
+mod receipt;
+```
+
+We then need to install the ``ic-evm-utils`` and ``evm-rpc-canister-types`` packages that allow us to interact with the EVM_RPC Canister 
+
+```toml 
+ic-evm-utils = "1.0.0"
+evm-rpc-canister-types = "1.0.0" 
+```
+
+Then add the ``evm_rpc`` canister to your ``dfx.json`` file: 
+
+```json 
+"evm_rpc": {
+      "type": "custom",
+      "candid": "https://github.com/internet-computer-protocol/evm-rpc-canister/releases/latest/download/evm_rpc.did",
+      "wasm": "https://github.com/internet-computer-protocol/evm-rpc-canister/releases/latest/download/evm_rpc.wasm.gz",
+      "remote": {
+      "id": {
+        "ic": "7hfb6-caaaa-aaaar-qadga-cai"
+      }
+      },
+      "specified_id": "7hfb6-caaaa-aaaar-qadga-cai",
+      "init_arg": "(record { nodesInSubnet = 28 })"
+    },
+```
+
+Import the required dependencies in your ``lib.rs`` file and instantiate your ``EVM_RPC`` canister:
+
+```rust 
+// Import required types
+use evm_rpc_canister_types::{
+    EthSepoliaService, EvmRpcCanister, GetTransactionReceiptResult, MultiGetTransactionReceiptResult, RpcServices
+};
+use candid::{Nat, Principal};
+
+// Initialize the canister
+pub const EVM_RPC_CANISTER_ID: Principal =
+  Principal::from_slice(b"\x00\x00\x00\x00\x02\x30\x00\xCC\x01\x01"); // 7hfb6-caaaa-aaaar-qadga-cai
+pub const EVM_RPC: EvmRpcCanister = EvmRpcCanister(EVM_RPC_CANISTER_ID);
+
+// Convert `GetTransactionReceiptResult` to`ReceiptWrapper`,for proper handling of the response 
+impl From<GetTransactionReceiptResult> for receipt::ReceiptWrapper {
+    fn from(result: GetTransactionReceiptResult) -> Self {
+        match result {
+            GetTransactionReceiptResult::Ok(receipt) => {
+                if let Some(receipt) = receipt {
+                    receipt::ReceiptWrapper::Ok(receipt::TransactionReceiptData {
+                        to: receipt.to,
+                        status: receipt.status.to_string(),
+                        transaction_hash: receipt.transactionHash,
+                        block_number: receipt.blockNumber.to_string(),
+                        from: receipt.from,
+                        logs: receipt.logs.into_iter().map(|log| receipt::LogEntry {
+                            address: log.address,
+                            topics: log.topics,
+                        }).collect(),
+                    })
+                } else {
+                    receipt::ReceiptWrapper::Err("Receipt is None".to_string())
+                }
+            },
+            GetTransactionReceiptResult::Err(e) => receipt::ReceiptWrapper::Err(format!("Error on Get transaction receipt result: {:?}", e)),
+        }
+    }
+} 
+```
+
+Finally, test the transaction by getting the receipt using this function below:
 
 ```rust
 #[ic_cdk::update]
@@ -327,6 +411,37 @@ async fn get_receipt(hash: String) -> String {
 }
 ```
 
+Create a new function  called ``eth_get_transaction_receipt``that is responsible for getting the transaction receipt the transaction hash
+
+```rust
+async fn eth_get_transaction_receipt(hash: String) -> Result<GetTransactionReceiptResult, String> {
+    // Make the call to the EVM_RPC canister
+    let result: Result<(MultiGetTransactionReceiptResult,), String> = EVM_RPC 
+        .eth_get_transaction_receipt(
+            RpcServices::EthSepolia(Some(vec![
+                EthSepoliaService::PublicNode,
+                EthSepoliaService::BlockPi,
+                EthSepoliaService::Ankr,
+            ])),
+            None, 
+            hash, 
+            10_000_000_000
+        )
+        .await 
+        .map_err(|e| format!("Failed to call eth_getTransactionReceipt: {:?}", e));
+
+    match result {
+        Ok((MultiGetTransactionReceiptResult::Consistent(receipt),)) => {
+            Ok(receipt)
+        },
+        Ok((MultiGetTransactionReceiptResult::Inconsistent(error),)) => {
+            Err(format!("EVM_RPC returned inconsistent results: {:?}", error))
+        },
+        Err(e) => Err(format!("Error calling EVM_RPC: {}", e)),
+    }    
+}
+```
+ 
 Now, create a function to verify the transaction:
 
 ```rust
