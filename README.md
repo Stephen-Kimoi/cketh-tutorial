@@ -2,13 +2,51 @@
 
 This tutorial will guide you through the process of working with ckETH, from generating a subaccount for ETH deposits to minting ckETH and verifying transactions on-chain. By the end of this tutorial, you will have a basic understanding of how to interact with the ckETH protocol using a Rust backend and a React frontend.
 
+Slides on ckETH explanation can be found [here](https://www.canva.com/design/DAGNHEG_n-Y/Z8vo3oZsTnxMINLBlyizYw/edit)
+
 ## Prerequisites
 
 Before we begin, ensure you have the following:
 
-- A working Rust development environment.
-- A React setup for your frontend.
-- MetaMask installed in your browser with Sepolia ETH (testnet) tokens.
+- You've installed [necessary environment requirements](https://internetcomputer.org/docs/current/developer-docs/getting-started/install/)
+- [MetaMask installed in your browser](https://metamask.io/download/) with [Sepolia ETH (testnet) tokens](https://www.alchemy.com/faucets/ethereum-sepolia)
+- Basic knowledge oF rust
+
+## Install project template
+I have created a simple template that comes with the configurations for calling the heloper smart contract on Ethereum, this allows you to only focus on the backend logic for intergrating ckETH
+
+Here's the [link to the repo](https://github.com/Stephen-Kimoi/starter-template)
+
+## Step 0: Setting Up the Project
+Clone the project template from the link provided above. 
+
+```bash
+git clone https://github.com/Stephen-Kimoi/starter-template.git
+```
+
+```bash 
+cd starter-template && npm install
+```
+
+Give permissions to the script
+```bash 
+chmod +x ./did.sh
+```
+
+Start the local replica for dfx 
+```bash dfx 
+dfx start --clean --background
+```
+
+Deploy the project 
+```bash
+./did.sh && dfx generate && dfx deploy
+```
+
+Start the frontend 
+```bash 
+npm run start 
+```
 
 ## Step 1: Generating a Subaccount from a Principal ID
 
