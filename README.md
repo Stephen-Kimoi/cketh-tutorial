@@ -478,6 +478,8 @@ When you're done with that you can redeploy all the canisters (including evm_rpc
 ```bash 
 ./did.sh && dfx generate cketh_starter_backend && dfx deploy evm_rpc && dfx deploy cketh_starter_backend
 ```
+You can now call the button ``deposit`` on your frontend section to mint ckETH tokens to your backend principal ID
+
 ### Frontend Code for Verification
 
 Add a section in your frontend to input a transaction hash and verify it:
