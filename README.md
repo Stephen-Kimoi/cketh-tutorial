@@ -373,6 +373,9 @@ pub const EVM_RPC_CANISTER_ID: Principal =
   Principal::from_slice(b"\x00\x00\x00\x00\x02\x30\x00\xCC\x01\x01"); // 7hfb6-caaaa-aaaar-qadga-cai
 pub const EVM_RPC: EvmRpcCanister = EvmRpcCanister(EVM_RPC_CANISTER_ID);
 
+// Define the Minter address for ckSepoliaETH
+const MINTER_ADDRESS: &str = "0xb44b5e756a894775fc32eddf3314bb1b1944dc34"; 
+
 // Convert `GetTransactionReceiptResult` to`ReceiptWrapper`,for proper handling of the response 
 impl From<GetTransactionReceiptResult> for receipt::ReceiptWrapper {
     fn from(result: GetTransactionReceiptResult) -> Self {
@@ -398,17 +401,6 @@ impl From<GetTransactionReceiptResult> for receipt::ReceiptWrapper {
         }
     }
 } 
-```
-
-Finally, test the transaction by getting the receipt using this function below:
-
-```rust
-#[ic_cdk::update]
-async fn get_receipt(hash: String) -> String {
-    let receipt = eth_get_transaction_receipt(hash).await.unwrap();
-    let wrapper = receipt::ReceiptWrapper::from(receipt);
-    serde_json::to_string(&wrapper).unwrap()
-}
 ```
 
 Create a new function  called ``eth_get_transaction_receipt``that is responsible for getting the transaction receipt the transaction hash
@@ -481,6 +473,11 @@ async fn verify_transaction(hash: String) -> Result<receipt::VerifiedTransaction
 }
 ```
 
+When you're done with that you can redeploy all the canisters (including evm_rpc canister) locally by running the command 
+
+``bash 
+./did.sh && dfx generate cketh_starter_backend && dfx deploy evm_rpc && dfx deploy cketh_starter_backend
+```
 ### Frontend Code for Verification
 
 Add a section in your frontend to input a transaction hash and verify it:
