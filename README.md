@@ -17,7 +17,7 @@ I have created a simple template that comes with the configurations for calling 
 
 Here's the [link to the repo](https://github.com/Stephen-Kimoi/starter-template)
 
-## Step 0: Setting Up the Project
+## Step 0(a): Setting Up the Project
 Clone the project template from the link provided above. 
 
 ```bash
@@ -38,15 +38,196 @@ Start the local replica for dfx
 dfx start --clean --background
 ```
 
-Deploy the project 
+Deploy the backend canister
 ```bash
-./did.sh && dfx generate && dfx deploy
+./did.sh && dfx generate cketh_starter_backend && dfx deploy cketh_starter_backend
 ```
 
 Start the frontend 
 ```bash 
 npm run start 
 ```
+
+## Step 0(b): Understanding the frontend logic
+
+## 1. `depositAddress`
+
+### Description
+The `depositAddress` function is responsible for retrieving a unique deposit address from the backend canister on the Internet Computer. This address is where the user will send their Ethereum deposit.
+
+### Usage
+- **Purpose**: Fetches and sets the deposit address in the `canisterDepositAddress` state.
+- **Called When**: The user clicks the "Get Deposit Address" button.
+
+### Code Example
+```javascript
+const depositAddress = async () => {
+  const depositAddress = await cketh_starter_backend.canister_deposit_principal();
+  console.log("Deposit Address: ", depositAddress);
+  setCanisterDepositAddress(depositAddress);
+};
+```
+
+### Key Points
+- **Async Operation**: The function is asynchronous, ensuring that the deposit address is retrieved properly before updating the state.
+- **State Update**: After fetching the address, it updates the `canisterDepositAddress` state to make it available for subsequent transactions.
+
+## 2. `write`
+
+### Description
+The `write` function interacts with the `MinterHelper` smart contract on Ethereum to execute the `deposit` method. This method sends the specified amount of Ethereum to the deposit address.
+
+### Usage
+- **Purpose**: Initiates a transaction to deposit Ethereum into the deposit address.
+- **Called When**: The user clicks the "Deposit" button.
+
+### Code Example
+```javascript
+const { write, data, isLoading: isWriteLoading } = useContractWrite({
+  address: contractAddress,
+  abi: abi,
+  functionName: "deposit",
+  value: parseEther(amount.toString()),
+  args: [canisterDepositAddress],
+  onSuccess(data) {
+    toast.info("Sending ETH to the helper contract");
+  },
+  onError(error) {
+    toast.error("Failed to send ETH");
+    console.error(error);
+  }
+});
+```
+
+### Key Points
+- **Parameters**: Sends the Ethereum amount and deposit address as arguments to the `deposit` function in the smart contract.
+- **Notification**: Provides user feedback through toast notifications upon success or error.
+- **Loading State**: Manages the loading state with `isWriteLoading` to disable inputs and buttons during the transaction.
+
+## 3. `useWaitForTransaction`
+
+### Description
+The `useWaitForTransaction` hook monitors the status of the Ethereum transaction initiated by the `write` function. Once the transaction is confirmed, it triggers the `verifyTransaction` function.
+
+### Usage
+- **Purpose**: Waits for transaction confirmation and initiates verification.
+- **Called When**: Automatically triggered after a transaction hash is generated.
+
+### Code Example
+```javascript
+const { isLoading: isTxLoading } = useWaitForTransaction({
+  hash: data?.hash,
+  onSuccess() {
+    toast.info("Verifying the transaction on-chain");
+    verifyTransaction(data.hash);
+  },
+  onError(error) {
+    toast.error("Transaction failed or rejected");
+    console.error(error);
+  }
+});
+```
+
+### Key Points
+- **Transaction Monitoring**: It checks the status of the transaction using its hash.
+- **Verification Trigger**: On success, it calls the `verifyTransaction` function to validate the transaction on-chain.
+
+## 4. `verifyTransaction`
+
+### Description
+The `verifyTransaction` function is responsible for verifying a transaction on the Ethereum blockchain by interacting with the backend canister on the Internet Computer.
+
+### Usage
+- **Purpose**: Verifies the transaction using its hash and retrieves the result.
+- **Called When**: 
+  - Automatically after a transaction is confirmed.
+  - Manually when the user inputs a transaction hash and clicks the "Verify Transaction" button.
+
+### Code Example
+```javascript
+const verifyTransaction = async (hash) => {
+  setIsVerifying(true); // Start loading
+  setVerificationError(null); // Reset error state
+
+  try {
+    const result = await cketh_starter_backend.verify_transaction(hash);
+    setVerificationResult(result); // Store the verification result
+    toast.success("Transaction verified successfully");
+  } catch (error) {
+    setVerificationError("Verification failed. Please check the transaction hash and try again.");
+    toast.error("Verification failed");
+    console.error(error);
+  } finally {
+    setIsVerifying(false); // Stop loading
+  }
+};
+```
+
+### Key Points
+- **Transaction Hash**: Takes the transaction hash as an argument.
+- **Async Operation**: This function is asynchronous and updates the UI based on success or failure.
+- **Error Handling**: Catches errors during the verification process and displays appropriate messages.
+- **State Management**: Updates `isVerifying`, `verificationResult`, and `verificationError` states to reflect the current status of the verification process.
+
+## 5. `changeAmountHandler`
+
+### Description
+The `changeAmountHandler` function manages changes to the deposit amount input field, ensuring that only valid numerical values are accepted.
+
+### Usage
+- **Purpose**: Updates the `amount` state based on user input.
+- **Called When**: The user types in the "Amount" input field.
+
+### Code Example
+```javascript
+const changeAmountHandler = (e) => {
+  let amount = e.target.valueAsNumber;
+  if (Number.isNaN(amount) || amount < 0) amount = 0;
+  setAmount(amount);
+};
+```
+
+### Key Points
+- **Input Validation**: Ensures that the input is a positive number or resets it to zero.
+- **State Update**: Directly updates the `amount` state based on user input.
+
+## 6. `changeAddressHandler`
+
+### Description
+The `changeAddressHandler` function handles changes to the deposit address input field.
+
+### Usage
+- **Purpose**: Updates the `canisterDepositAddress` state with the user's input.
+- **Called When**: The user types in the "Canister Deposit Address" input field.
+
+### Code Example
+```javascript
+const changeAddressHandler = (e) => {
+  setCanisterDepositAddress(e.target.value);
+};
+```
+
+### Key Points
+- **State Update**: Directly updates the `canisterDepositAddress` state with the new input value.
+
+## 7. `changeTransactionHashHandler`
+
+### Description
+The `changeTransactionHashHandler` function is responsible for managing changes to the transaction hash input field.
+
+### Usage
+- **Purpose**: Updates the `transactionHash` state with the user-provided hash.
+- **Called When**: The user types in the "Transaction Hash" input field.
+
+### Code Example
+```javascript
+const changeTransactionHashHandler = (e) => {
+  setTransactionHash(e.target.value);
+};
+```
+
+### Key Points
+- **State Update**: Directly updates the `transactionHash` state with the new hash value.
 
 ## Step 1: Generating a Subaccount from a Principal ID
 
