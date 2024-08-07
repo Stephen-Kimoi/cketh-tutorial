@@ -129,13 +129,13 @@ const { isLoading: isTxLoading } = useWaitForTransaction({
 ```
 
 ### Key Points
-- **Transaction Monitoring**: It checks the status of the transaction using its hash.
+- **Transaction Monitoring**: It checks the transaction status using its hash.
 - **Verification Trigger**: On success, it calls the `verifyTransaction` function to validate the transaction on-chain.
 
 ## 4. `verifyTransaction`
 
 ### Description
-The `verifyTransaction` function is responsible for verifying a transaction on the Ethereum blockchain by interacting with the backend canister on the Internet Computer.
+The `verifyTransaction` function verifies a transaction on the Ethereum blockchain by interacting with the backend canister on the Internet Computer.
 
 ### Usage
 - **Purpose**: Verifies the transaction using its hash and retrieves the result.
@@ -213,7 +213,7 @@ const changeAddressHandler = (e) => {
 ## 7. `changeTransactionHashHandler`
 
 ### Description
-The `changeTransactionHashHandler` function is responsible for managing changes to the transaction hash input field.
+The `changeTransactionHashHandler` function manages changes to the transaction hash input field.
 
 ### Usage
 - **Purpose**: Updates the `transactionHash` state with the user-provided hash.
@@ -517,6 +517,103 @@ function Header() {
 ```
 
 This allows users to verify the transaction by inputting the transaction hash.
+
+## Step 4: Fetching canister's ckETH balance and performing transfer functionalities
+
+Import the following structs from the ``b3_utils::ledger`` and ``b3_utils::api`` dependencies:
+```rust 
+use b3_utils::ledger::{ICRCAccount, ICRC1, ICRC1TransferArgs, ICRC1TransferResult};
+use b3_utils::api::{InterCall, CallCycles}; 
+```
+Now define the ``LEDGER`` canister ID that is responsible for the withdrawal and transfer of ckETH and the ``MINTER`` canister ID that is responsible for minting and burning of ckETH tokens
+
+```rust 
+const LEDGER: &str = "apia6-jaaaa-aaaar-qabma-cai";
+const MINTER: &str = "jzenf-aiaaa-aaaar-qaa7q-cai";
+```
+
+Copy the following content and add them to a mod file, name the file ``minter.rs``: 
+```rust 
+use candid::{CandidType, Deserialize, Nat};
+
+#[derive(CandidType, Deserialize)]
+pub struct WithdrawalArg {
+    pub amount: Nat,
+    pub recipient: String,
+}
+
+#[derive(CandidType, Deserialize, Clone, Debug)]
+pub struct RetrieveEthRequest {
+    pub block_index: Nat,
+}
+
+#[derive(CandidType, Deserialize, Debug)]
+pub enum WithdrawalError {
+    AmountTooLow { min_withdrawal_amount: Nat },
+    InsufficientFunds { balance: Nat },
+    InsufficientAllowance { allowance: Nat },
+    TemporarilyUnavailable(String),
+}
+
+pub type WithdrawalResult = Result<RetrieveEthRequest, WithdrawalError>;
+```
+
+Ensure you've imported the mod on your ``lib.rs`` file: 
+```rust
+mod minter;
+```
+
+To ensure that only authorized accounts call the withdraw functionality, ensure you've imported the function ``caller_is_controller`` from ``b3_utils``: 
+```rust 
+use b3_utils::caller_is_controller;
+```
+
+Now add the following functions to your ``lib.rs``: 
+```rust
+// Fetching canister's balance of ckETH
+#[ic_cdk::update]
+async fn balance() -> Nat {
+    let account = ICRCAccount::new(ic_cdk::id(), None);
+
+    ICRC1::from(LEDGER).balance_of(account).await.unwrap()
+}
+
+// Transfering a specified amount of ckETH to another account 
+#[ic_cdk::update]
+async fn transfer(to: String, amount: Nat) -> ICRC1TransferResult {
+    let to = ICRCAccount::from_str(&to).unwrap(); 
+    
+    let transfer_args = ICRC1TransferArgs {
+        to, 
+        amount, 
+        from_subaccount: None, 
+        fee: None, 
+        memo: None, 
+        created_at_time: None, 
+    }; 
+
+    ICRC1::from(LEDGER).transfer(transfer_args).await.unwrap()
+}
+
+// Withdrawing ckETH from the canister
+#[ic_cdk::update(guard = "caller_is_controller")]
+async fn withdraw(amount: Nat, recipient: String) -> minter::WithdrawalResult {
+    let withdraw = minter::WithdrawalArg{ 
+        amount, 
+        recipient
+    }; 
+    
+    InterCall::from(MINTER)
+    .call(
+        "withdraw_eth", 
+        withdraw, 
+        CallCycles::NoPay
+    )
+    .await
+    .unwrap()
+}
+```
+
 
 ## Conclusion
 
