@@ -17,6 +17,8 @@ I have created a simple template that comes with the configurations for calling 
 
 Here's the [link to the repo](https://github.com/Stephen-Kimoi/starter-template)
 
+![alt text](UI.png)
+
 ## Step 0: Setting Up the Project
 Clone the project template from the link provided above. 
 

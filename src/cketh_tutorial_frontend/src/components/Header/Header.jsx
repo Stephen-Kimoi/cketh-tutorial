@@ -22,13 +22,14 @@ function Header() {
     console.log("Deposit Address: ", depositAddress);
     setCanisterDepositAddress(depositAddress);
   };
-
+   
+  // Calling the deposit function in the helper contract
   const { write, data, isLoading: isWriteLoading } = useContractWrite({
     address: contractAddress,
     abi: abi,
     functionName: "deposit",
     value: parseEther(amount.toString()),
-    args: [canisterDepositAddress],
+    args: [canisterDepositAddress], 
     onSuccess(data) {
       toast.info("Sending ETH to the helper contract");
     },
