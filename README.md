@@ -36,7 +36,7 @@ chmod +x ./did.sh
 ```
 
 Start the local replica for dfx 
-```bash dfx 
+```bash
 dfx start --clean --background
 ```
 

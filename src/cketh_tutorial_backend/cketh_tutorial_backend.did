@@ -1,5 +1,18 @@
+type ICRC1TransferError = variant {
+  GenericError : record { message : text; error_code : nat };
+  TemporarilyUnavailable;
+  BadBurn : record { min_burn_amount : nat };
+  Duplicate : record { duplicate_of : nat };
+  BadFee : record { expected_fee : nat };
+  CreatedInFuture : record { ledger_time : nat64 };
+  TooOld;
+  InsufficientFunds : record { balance : nat };
+};
 type LogEntry = record { topics : vec text; address : text };
-type Result = variant { Ok : VerifiedTransactionDetails; Err : text };
+type Result = variant { Ok : nat; Err : ICRC1TransferError };
+type Result_1 = variant { Ok : VerifiedTransactionDetails; Err : text };
+type Result_2 = variant { Ok : RetrieveEthRequest; Err : WithdrawalError };
+type RetrieveEthRequest = record { block_index : nat };
 type VerifiedTransactionDetails = record {
   to : text;
   status : text;
@@ -8,8 +21,18 @@ type VerifiedTransactionDetails = record {
   logs : vec LogEntry;
   block_number : text;
 };
+type WithdrawalError = variant {
+  TemporarilyUnavailable : text;
+  InsufficientAllowance : record { allowance : nat };
+  AmountTooLow : record { min_withdrawal_amount : nat };
+  InsufficientFunds : record { balance : nat };
+};
 service : {
+  balance : (principal) -> (nat);
   canister_deposit_principal : () -> (text) query;
+  convert_principal_to_byte32 : (principal) -> (text) query;
   get_receipt : (text) -> (text);
-  verify_transaction : (text) -> (Result);
+  transfer : (text, nat) -> (Result);
+  verify_transaction : (text) -> (Result_1);
+  withdraw : (nat, text) -> (Result_2);
 }

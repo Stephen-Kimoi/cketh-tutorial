@@ -53,7 +53,15 @@ fn canister_deposit_principal() -> String {
     vec_to_hex_string_with_0x(bytes32)
 }
 
-// Function 2: Testing get receipt function
+// Function 2: Converting the principal into subaccount
+#[ic_cdk::query]
+fn convert_principal_to_byte32(principal_id: Principal) -> String {
+    let subaccount = Subaccount::from(principal_id);
+    let bytes32 = subaccount.to_bytes32().unwrap();
+    vec_to_hex_string_with_0x(bytes32)
+}
+
+// Function 3: Testing get receipt function
 #[ic_cdk::update]
 async fn get_receipt(hash: String) -> String {
     let receipt = eth_get_transaction_receipt(hash).await.unwrap();
@@ -61,7 +69,7 @@ async fn get_receipt(hash: String) -> String {
     serde_json::to_string(&wrapper).unwrap()
 }
 
-// Function 3: Verifying the transaction on-chain 
+// Function 4: Verifying the transaction on-chain 
 #[ic_cdk::update]
 async fn verify_transaction(hash: String) -> Result<receipt::VerifiedTransactionDetails, String> {
     // Get the transaction receipt
@@ -134,8 +142,8 @@ async fn eth_get_transaction_receipt(hash: String) -> Result<GetTransactionRecei
 
 // Fetching canister's balance of ckETH
 #[ic_cdk::update]
-async fn balance() -> Nat {
-    let account = ICRCAccount::new(ic_cdk::id(), None);
+async fn balance(principal_id: Principal) -> Nat {
+    let account = ICRCAccount::new(principal_id, None);
 
     ICRC1::from(LEDGER).balance_of(account).await.unwrap()
 }
