@@ -4,7 +4,7 @@ function Navbar({ openModal, account, walletConnected }) {
   return (
     <div className="navbar">
       <div className="logo">
-        <p>ckETH Tester</p>
+        <p>ckTokens Tester</p>
       </div>
 
       {
