@@ -13,7 +13,7 @@ export const connectWallet = async () => {
         const chainId = await ethereum.request({ method: "eth_chainId" })
         console.log("Chain id is: ", chainId)
 
-        if (chainId !== "0x13881"){
+        if (chainId !== "0xaa36a7"){
             switchChainIds()
         } 
 
@@ -23,10 +23,10 @@ export const connectWallet = async () => {
     }
 }
 
-//  Switching chainId to Polygon Mumbai 
+//  Switching chainId to Sepolia
 const switchChainIds = async () => {
    await ethereum.request({
         method: "wallet_switchEthereumChain", 
-        params: [{ chainId: "0x13881" }], // Change this to your preferred chain ID
+        params: [{ chainId: "0xaa36a7" }], // Change this to your preferred chain ID
    })
 }
