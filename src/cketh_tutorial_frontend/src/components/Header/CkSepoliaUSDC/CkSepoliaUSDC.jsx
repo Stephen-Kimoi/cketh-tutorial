@@ -69,8 +69,10 @@ function CkSepoliaUSDC({ walletConnected, account }) {
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const signer = provider.getSigner();
       const contract = new ethers.Contract(SepoliaUSDCAddress, erc20ABI, signer);
+
+      const amountInSmallestUnit = ethers.utils.parseUnits(amount.toString(), 6);
     
-      const tx = await contract.approve(MinterHelper.SepoliaUSDCHelper, ethers.utils.parseUnits(amount.toString(), 18));
+      const tx = await contract.approve(MinterHelper.SepoliaUSDCHelper, amountInSmallestUnit);
       toast.info("Approving helper contract to spend Sepolia USDC");
       await tx.wait();
       toast.success("Approval successful. You can now proceed with the deposit.");
@@ -95,12 +97,15 @@ function CkSepoliaUSDC({ walletConnected, account }) {
       // First, approve the helper contract to spend Sepolia USDC
       await approveSepoliaUSDC();
   
+      // Convert the amount to the smallest unit
+      const amountInSmallestUnit = ethers.utils.parseUnits(amount.toString(), 6);
+  
       // Proceed with the deposit after approval
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const signer = provider.getSigner();
       const contract = new ethers.Contract(MinterHelper.SepoliaUSDCHelper, abi, signer);
   
-      const tx = await contract.deposit(SepoliaUSDCAddress, ethers.utils.parseUnits(amount.toString(), 18), canisterDepositAddress);
+      const tx = await contract.deposit(SepoliaUSDCAddress, amountInSmallestUnit, canisterDepositAddress);
   
       toast.info("Depositing Sepolia USDC");
       await tx.wait();

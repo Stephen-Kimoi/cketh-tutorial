@@ -3,7 +3,7 @@ use b3_utils::ledger::{ICRCAccount, ICRC1, ICRC1TransferArgs, ICRC1TransferResul
 use b3_utils::api::{InterCall, CallCycles}; 
 use b3_utils::caller_is_controller;
 
-use crate::{canister_id, minter}; 
+use crate::{canister_id, minter, transaction_hash}; 
 
 // Fetching canister's balance of ckETH
 #[ic_cdk::update]
@@ -46,4 +46,18 @@ async fn ck_sepolia_eth_withdraw(amount: Nat, recipient: String) -> minter::With
     )
     .await
     .unwrap()
+}
+
+// Function to store a transaction hash for ck_sepolia_eth
+#[ic_cdk::update]
+fn store_ck_sepolia_eth_hash(hash: String) {
+    let mut hashes = transaction_hash::CK_SEPOLIA_ETH_HASHES.lock().unwrap();
+    hashes.push(hash);
+}
+
+// Function to retrieve all transaction hashes for ck_sepolia_eth
+#[ic_cdk::query]
+fn get_ck_sepolia_eth_hashes() -> Vec<String> {
+    let hashes = transaction_hash::CK_SEPOLIA_ETH_HASHES.lock().unwrap();
+    hashes.clone()
 }

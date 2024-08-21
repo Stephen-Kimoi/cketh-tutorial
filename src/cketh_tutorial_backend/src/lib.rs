@@ -13,6 +13,7 @@ mod canister_id;
 mod ck_sepolia_eth;
 mod ck_sepolia_usdc;
 mod withdraw;
+mod transaction_hash;
 
 pub const EVM_RPC_CANISTER_ID: Principal =
   Principal::from_slice(b"\x00\x00\x00\x00\x02\x30\x00\xCC\x01\x01"); // 7hfb6-caaaa-aaaar-qadga-cai

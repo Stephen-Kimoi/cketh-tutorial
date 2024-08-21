@@ -329,6 +329,7 @@ dependencies = [
  "ic-cdk-timers",
  "ic-evm-utils",
  "icrc-ledger-types",
+ "lazy_static",
  "num-bigint",
  "num-traits",
  "serde",

@@ -65,7 +65,11 @@ service : {
   ck_sepolia_usdc_index_canister_id : () -> (text) query;
   ck_sepolia_usdc_ledger_canister_id : () -> (text) query;
   convert_principal_to_byte32 : (principal) -> (text) query;
+  get_ck_sepolia_eth_hashes : () -> (vec text) query;
+  get_ck_sepolia_usdc_hashes : () -> (vec text) query;
   get_receipt : (text) -> (text);
+  store_ck_sepolia_eth_hash : (text) -> ();
+  store_ck_sepolia_usdc_hash : (text) -> ();
   verify_transaction : (text) -> (Result_3);
   withdraw_ckusdc_to_ethereum : (nat, text) -> (Result_4);
 }

@@ -1,11 +1,10 @@
 use candid::{Nat, Principal};
-use b3_utils::{vec_to_hex_string_with_0x, Subaccount};
-use b3_utils::ledger::{ICRCAccount, ICRC1, ICRC1TransferArgs, ICRC1TransferResult, ICRC2ApproveArgs, ICRC2ApproveResult};
+use b3_utils::Subaccount;
+use b3_utils::ledger::{ICRCAccount, ICRC1, ICRC2ApproveArgs, ICRC2ApproveResult};
 use b3_utils::api::{InterCall, CallCycles}; 
-use b3_utils::caller_is_controller;
 use ic_cdk::api::call::CallResult;
 
-use crate::{canister_id, minter, withdraw};
+use crate::{canister_id, transaction_hash, withdraw};
 
 #[ic_cdk::update]
 async fn check_ckusdc_balance(principal_id: Principal) -> Nat {
@@ -85,4 +84,18 @@ async fn withdraw_ckusdc_to_ethereum(amount: Nat, eth_address: String) -> CallRe
     )
     .await
     .unwrap()
+}
+
+// Function to store a transaction hash for ck_sepolia_usdc
+#[ic_cdk::update]
+fn store_ck_sepolia_usdc_hash(hash: String) {
+    let mut hashes = transaction_hash::CK_SEPOLIA_USDC_HASHES.lock().unwrap();
+    hashes.push(hash);
+}
+
+// Function to retrieve all transaction hashes for ck_sepolia_usdc
+#[ic_cdk::query]
+fn get_ck_sepolia_usdc_hashes() -> Vec<String> {
+    let hashes = transaction_hash::CK_SEPOLIA_USDC_HASHES.lock().unwrap();
+    hashes.clone()
 }
