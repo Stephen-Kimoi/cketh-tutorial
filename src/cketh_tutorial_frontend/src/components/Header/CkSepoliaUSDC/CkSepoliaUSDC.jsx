@@ -7,7 +7,7 @@ import { cketh_tutorial_backend } from 'declarations/cketh_tutorial_backend';
 import { toast, ToastContainer } from 'react-toastify';
 import { Principal } from '@dfinity/principal';
 import 'react-toastify/dist/ReactToastify.css';
-import { FaCopy } from 'react-icons/fa'; 
+import { FaCopy, FaArrowLeft } from 'react-icons/fa';
 
 function CkSepoliaUSDC({ walletConnected, account }) {
   const [amount, setAmount] = useState(0);
@@ -21,6 +21,9 @@ function CkSepoliaUSDC({ walletConnected, account }) {
   const [ckSepoliaUSDCid, setSepoliaUSDCid] = useState("");
   const [isDepositLoading, setIsDepositLoading] = useState(false);
   const [isApproveLoading, setIsApproveLoading] = useState(false);
+  const [transactionHashes, setTransactionHashes] = useState([]);
+  const [selectedReceipt, setSelectedReceipt] = useState(null);
+  const [isReceiptLoading, setIsReceiptLoading] = useState(false);
 
   // SepoliaUSDC Address
   const SepoliaUSDCAddress = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"; 
@@ -110,12 +113,43 @@ function CkSepoliaUSDC({ walletConnected, account }) {
       toast.info("Depositing Sepolia USDC");
       await tx.wait();
       toast.success("Deposit successful");
-      console.log("Deposit transaction data: ", tx);
+
+      // Store transaction hash
+      toast.info("Storing transaction hash...");
+      await cketh_tutorial_backend.store_ck_sepolia_usdc_hash(tx.hash);
+      toast.success("Transaction hash stored");
+
+      // Fetch updated transaction hashes
+      fetchTransactionHashes();
     } catch (error) {
       toast.error("Operation failed");
       console.error(error);
     } finally {
       setIsDepositLoading(false);
+    }
+  };
+
+  const fetchTransactionHashes = async () => {
+    try {
+      const hashes = await cketh_tutorial_backend.get_ck_sepolia_usdc_hashes();
+      setTransactionHashes(hashes);
+    } catch (error) {
+      toast.error("Failed to fetch transaction hashes");
+      console.error(error);
+    }
+  };
+
+  const getReceipt = async (hash) => {
+    setIsReceiptLoading(true);
+    try {
+      const receipt = await cketh_tutorial_backend.get_receipt(hash);
+      setSelectedReceipt(receipt);
+      toast.success("Transaction receipt fetched");
+    } catch (error) {
+      toast.error("Failed to fetch transaction receipt");
+      console.error(error);
+    } finally {
+      setIsReceiptLoading(false);
     }
   };
 
@@ -225,7 +259,8 @@ function CkSepoliaUSDC({ walletConnected, account }) {
 
   useEffect(() => {
     ckSepoliaUSDCID();
-    depositAddress(); 
+    depositAddress();
+    fetchTransactionHashes();
   }, []);
 
   return (
@@ -276,6 +311,34 @@ function CkSepoliaUSDC({ walletConnected, account }) {
                 {isDepositLoading ? 'Depositing ckSepoliaUSDC...' : 'Deposit ckSepoliaUSDC'}
               </button>
             </div>
+          </div>
+
+          <div className='section'>
+            <h2>Check Previous Transactions</h2>
+            {selectedReceipt ? (
+              <div className='receipt-display'>
+                <FaArrowLeft
+                  onClick={() => setSelectedReceipt(null)}
+                  style={{ cursor: 'pointer', color: '#007bff', marginBottom: '10px' }}
+                />
+                <h3>Transaction Receipt</h3>
+                <pre>{JSON.stringify(selectedReceipt, null, 2)}</pre>
+              </div>
+            ) : (
+              <div className='transaction-list'>
+                {isReceiptLoading ? (
+                  <p>Loading transaction receipt...</p>
+                ) : (
+                  transactionHashes.map((hash, index) => (
+                    <div key={index} className='transaction-item'>
+                      <span onClick={() => getReceipt(hash)} style={{ cursor: 'pointer', color: '#007bff' }}>
+                        {`${hash.slice(0, 24)}...${hash.slice(-24)}`}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
           </div>
         </div>
 
