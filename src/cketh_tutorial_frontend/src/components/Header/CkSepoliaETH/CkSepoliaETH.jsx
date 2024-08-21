@@ -4,10 +4,10 @@ import abi from '../contracts/SepoliaETHMinterHelper.json';
 import MinterHelper from '../contracts/contracts-address.json';
 import '../TokenComponent.css';
 import { cketh_tutorial_backend } from 'declarations/cketh_tutorial_backend';
-import { toast, ToastContainer } from 'react-toastify';
 import { Principal } from '@dfinity/principal';
+import { FaCopy, FaArrowLeft } from 'react-icons/fa';
+import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { FaCopy } from 'react-icons/fa'; 
 
 function CkSepoliaETH({ walletConnected, account }) {
   const [amount, setAmount] = useState(0);
@@ -20,17 +20,20 @@ function CkSepoliaETH({ walletConnected, account }) {
   const [isGenerateLoading, setIsGenerateLoading] = useState(false);
   const [canisterDepositAddress, setCanisterDepositAddress] = useState("");
   const [isDepositLoading, setIsDepositLoading] = useState(false);
+  const [transactionHashes, setTransactionHashes] = useState([]);
+  const [selectedReceipt, setSelectedReceipt] = useState(null);
+  const [isReceiptLoading, setIsReceiptLoading] = useState(false);
 
   // Fetching ckSepoliaETH Canister ID
   const ckSepoliaETHID = async () => {
     const canisterID = await cketh_tutorial_backend.ck_sepolia_eth_ledger_canister_id();
-    setkSepoliaETHid(canisterID); 
+    setkSepoliaETHid(canisterID);
   };
 
   // Function for getting the deposit address
   const depositAddress = async () => {
     const depositAddress = await cketh_tutorial_backend.canister_deposit_principal();
-    console.log("Deposit address: ", depositAddress); 
+    console.log("Deposit address: ", depositAddress);
     setCanisterDepositAddress(depositAddress);
   };
 
@@ -53,11 +56,42 @@ function CkSepoliaETH({ walletConnected, account }) {
       toast.info("Sending ETH to the helper contract");
       await tx.wait();
       toast.success("Transaction successful");
+
+      // Store transaction hash
+      toast.info("Storing transaction hash...");
+      await cketh_tutorial_backend.store_ck_sepolia_eth_hash(tx.hash);
+      toast.success("Transaction hash stored");
+
+      // Fetch updated transaction hashes
+      fetchTransactionHashes();
     } catch (error) {
       toast.error("Failed to send ETH");
       console.error(error);
     } finally {
       setIsDepositLoading(false);
+    }
+  };
+
+  const fetchTransactionHashes = async () => {
+    try {
+      const hashes = await cketh_tutorial_backend.get_ck_sepolia_eth_hashes();
+      setTransactionHashes(hashes);
+    } catch (error) {
+      toast.error("Failed to fetch transaction hashes");
+      console.error(error);
+    }
+  };
+
+  const getReceipt = async (hash) => {
+    setIsReceiptLoading(true);
+    try {
+      const receipt = await cketh_tutorial_backend.get_receipt(hash);
+      setSelectedReceipt(receipt);
+    } catch (error) {
+      toast.error("Failed to fetch transaction receipt");
+      console.error(error);
+    } finally {
+      setIsReceiptLoading(false);
     }
   };
 
@@ -166,9 +200,10 @@ function CkSepoliaETH({ walletConnected, account }) {
   };
 
   useEffect(() => {
-    ckSepoliaETHID(); 
-    depositAddress(); 
-  },[])
+    ckSepoliaETHID();
+    depositAddress();
+    fetchTransactionHashes();
+  }, []);
 
   return (
     <div className='container'>
@@ -217,6 +252,34 @@ function CkSepoliaETH({ walletConnected, account }) {
                 {isDepositLoading ? 'Depositing ckSepoliaETH...' : 'Deposit ckSepoliaETH'}
               </button>
             </div>
+          </div>
+
+          <div className='section'>
+            <h2>Check Previous Transactions</h2>
+            {selectedReceipt ? (
+              <div className='receipt-display'>
+                <FaArrowLeft
+                  onClick={() => setSelectedReceipt(null)}
+                  style={{ cursor: 'pointer', color: '#007bff', marginBottom: '10px' }}
+                />
+                <h3>Transaction Receipt</h3>
+                <pre>{JSON.stringify(selectedReceipt, null, 2)}</pre>
+              </div>
+            ) : (
+              <div className='transaction-list'>
+                {isReceiptLoading ? (
+                  <p>Loading transaction receipt...</p>
+                ) : (
+                  transactionHashes.map((hash, index) => (
+                    <div key={index} className='transaction-item'>
+                      <span onClick={() => getReceipt(hash)} style={{ cursor: 'pointer', color: '#007bff' }}>
+                        {`${hash.slice(0, 24)}...${hash.slice(-24)}`}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
           </div>
         </div>
 
