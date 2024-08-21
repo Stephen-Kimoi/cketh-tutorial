@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import Navbar from './components/Navbar/Navbar';
 import CkSepoliaETH from './components/Header/CkSepoliaETH/CkSepoliaETH';
 import CkETH from './components/Header/CkETH/CkETH';
@@ -19,6 +21,20 @@ function App() {
     } catch (error) {
       console.error("Failed to connect wallet:", error);
     }
+  };
+
+  const handleDisabledButtonClick = () => {
+    console.log("Disabled button...");
+    toast.info("Still in progress...", {
+      position: "top-center",
+      autoClose: 3000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      progress: undefined,
+      theme: "colored",
+    });
   };
 
   const renderActiveComponent = () => {
@@ -55,13 +71,17 @@ function App() {
         </button>
         <button
           className={activeComponent === "CkETH" ? "active" : ""}
-          onClick={() => setActiveComponent("CkETH")}
+          onClick={() => handleDisabledButtonClick() }
+          // disabled
+          title="Still in progress..."
         >
           ckETH
         </button>
         <button
           className={activeComponent === "CkUSDC" ? "active" : ""}
-          onClick={() => setActiveComponent("CkUSDC")}
+          onClick={() => handleDisabledButtonClick()}
+          // disabled
+          title="Still in progress..."
         >
           ckUSDC
         </button>
@@ -74,6 +94,8 @@ function App() {
       </div>
 
       {renderActiveComponent()}
+
+      <ToastContainer />
     </>
   );
 }

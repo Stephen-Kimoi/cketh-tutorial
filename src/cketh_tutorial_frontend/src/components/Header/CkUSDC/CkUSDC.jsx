@@ -1,10 +1,7 @@
-// CkSepoliaETH.jsx
 import { useState } from 'react';
 import { ethers } from 'ethers';
-// import abi from '../contracts/MinterHelper.json';
-import abi from '../contracts/MinterHelper.json'
+import abi from '../contracts/SepoliaETHMinterHelper.json';
 import MinterHelper from '../contracts/contracts-address.json';
-import '../TokenComponent.css';
 import { cketh_tutorial_backend } from 'declarations/cketh_tutorial_backend';
 import { toast, ToastContainer } from 'react-toastify';
 import { Principal } from '@dfinity/principal';
@@ -100,7 +97,7 @@ function CkUSDC({ walletConnected, account }) {
   };
 
   return (
-    <div className='container'>
+    <div className='container relative'>
       <ToastContainer />
       <h1 className='title'>ckUSDC Tester</h1>
 
@@ -116,7 +113,6 @@ function CkUSDC({ walletConnected, account }) {
         <div className='section-row'>
           <div className='section'>
             <h2>ckUSDC Canister ID</h2>
-            {/* <button onClick={depositAddress} className='button'>Get Canister byte32 Address</button> */}
             <div>{canisterDepositAddress}</div>
           </div>
 
@@ -204,6 +200,11 @@ function CkUSDC({ walletConnected, account }) {
           <li><strong>Step 5:</strong> You can now check the balance of deposited ckUSDC by checking <b>Check ckUSDC Balance</b> function</li>
         </ol>
         <p><strong>Note:</strong> The "Get canister byte32 address" button generates the byte32 address of the backend canister.</p>
+      </div>
+
+      {/* Overlay to disable the component */}
+      <div className='overlay'>
+        <p>In progress...</p>
       </div>
     </div>
   );

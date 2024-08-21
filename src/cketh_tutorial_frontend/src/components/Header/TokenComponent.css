@@ -132,6 +132,21 @@
     margin-top: 10px;
     font-style: italic;
   }
+
+  .overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 24px;
+    z-index: 1000;
+  }
   
   @media (max-width: 768px) {
     .section-row {

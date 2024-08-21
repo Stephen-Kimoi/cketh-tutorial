@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { ethers } from 'ethers';
-// import abi from '../contracts/MinterHelper.json';
-import abi from '../contracts/MinterHelper.json'
+import abi from '../contracts/SepoliaETHMinterHelper.json';
 import MinterHelper from '../contracts/contracts-address.json';
 import '../TokenComponent.css';
 import { cketh_tutorial_backend } from 'declarations/cketh_tutorial_backend';
@@ -99,7 +98,7 @@ function CkETH({ walletConnected, account }) {
   };
 
   return (
-    <div className='container'>
+    <div className='container relative'>
       <ToastContainer />
       <h1 className='title'>CkETH Tester</h1>
 
@@ -203,6 +202,11 @@ function CkETH({ walletConnected, account }) {
         </ol>
         <p><strong>Note:</strong> The "Get canister byte32 address" button generates the byte32 address of the backend canister.</p>
       </div>
+
+      {/* Overlay to disable the component */}
+      {/* <div className='overlay'>
+        <p>In progress...</p>
+      </div> */}
     </div>
   );
 }

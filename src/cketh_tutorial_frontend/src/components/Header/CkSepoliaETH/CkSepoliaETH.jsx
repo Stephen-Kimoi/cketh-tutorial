@@ -1,8 +1,6 @@
-// CkSepoliaETH.jsx
 import { useEffect, useState } from 'react';
 import { ethers } from 'ethers';
-// import abi from '../contracts/MinterHelper.json';
-import abi from '../contracts/MinterHelper.json'
+import abi from '../contracts/SepoliaETHMinterHelper.json';
 import MinterHelper from '../contracts/contracts-address.json';
 import '../TokenComponent.css';
 import { cketh_tutorial_backend } from 'declarations/cketh_tutorial_backend';
@@ -21,18 +19,18 @@ function CkSepoliaETH({ walletConnected, account }) {
   const [generatePrincipalId, setGeneratePrincipalId] = useState("");
   const [isGenerateLoading, setIsGenerateLoading] = useState(false);
   const [canisterDepositAddress, setCanisterDepositAddress] = useState("");
+  const [isDepositLoading, setIsDepositLoading] = useState(false);
 
+  // Fetching ckSepoliaETH Canister ID
   const ckSepoliaETHID = async () => {
     const canisterID = await cketh_tutorial_backend.ck_sepolia_eth_ledger_canister_id();
-    console.log("ckSepoliaETH ID: ", canisterID);
     setkSepoliaETHid(canisterID); 
   };
 
   // Function for getting the deposit address
   const depositAddress = async () => {
-    // console.log("Getting deposit address..."); 
     const depositAddress = await cketh_tutorial_backend.canister_deposit_principal();
-    console.log("Desposit address: ", depositAddress); 
+    console.log("Deposit address: ", depositAddress); 
     setCanisterDepositAddress(depositAddress);
   };
 
@@ -42,10 +40,11 @@ function CkSepoliaETH({ walletConnected, account }) {
       return;
     }
 
+    setIsDepositLoading(true);
     try {
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const signer = provider.getSigner();
-      const contract = new ethers.Contract(MinterHelper.MinterHelper, abi, signer);
+      const contract = new ethers.Contract(MinterHelper.SepoliaETHMinterHelper, abi, signer);
 
       const tx = await contract.deposit(canisterDepositAddress, {
         value: ethers.utils.parseEther(amount.toString())
@@ -57,6 +56,8 @@ function CkSepoliaETH({ walletConnected, account }) {
     } catch (error) {
       toast.error("Failed to send ETH");
       console.error(error);
+    } finally {
+      setIsDepositLoading(false);
     }
   };
 
@@ -102,7 +103,6 @@ function CkSepoliaETH({ walletConnected, account }) {
 
   const copyToClipboard = (text) => {
     if (navigator.clipboard && window.isSecureContext) {
-      // Use the Clipboard API if available and secure
       navigator.clipboard.writeText(text).then(() => {
         toast.success("Copied to clipboard", {
           position: "top-center",
@@ -127,10 +127,9 @@ function CkSepoliaETH({ walletConnected, account }) {
         console.error(error);
       });
     } else {
-      // Fallback method for older browsers or non-secure contexts
       const textArea = document.createElement("textarea");
       textArea.value = text;
-      textArea.style.position = "fixed";  // Avoid scrolling to bottom
+      textArea.style.position = "fixed";
       document.body.appendChild(textArea);
       textArea.focus();
       textArea.select();
@@ -214,8 +213,8 @@ function CkSepoliaETH({ walletConnected, account }) {
                 placeholder="Amount"
                 className='input'
               />
-              <button onClick={depositckETH} className='button'>
-                Deposit ckSepoliaETH
+              <button onClick={depositckETH} disabled={isDepositLoading} className='button'>
+                {isDepositLoading ? 'Depositing ckSepoliaETH...' : 'Deposit ckSepoliaETH'}
               </button>
             </div>
           </div>

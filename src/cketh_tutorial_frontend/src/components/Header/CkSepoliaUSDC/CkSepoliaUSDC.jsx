@@ -1,52 +1,116 @@
-// CkSepoliaETH.jsx
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ethers } from 'ethers';
-// import abi from '../contracts/MinterHelper.json';
-import abi from '../contracts/MinterHelper.json'
+import abi from '../contracts/SepoliaUSDCAbi.json';
 import MinterHelper from '../contracts/contracts-address.json';
 import '../TokenComponent.css';
 import { cketh_tutorial_backend } from 'declarations/cketh_tutorial_backend';
 import { toast, ToastContainer } from 'react-toastify';
 import { Principal } from '@dfinity/principal';
 import 'react-toastify/dist/ReactToastify.css';
+import { FaCopy } from 'react-icons/fa'; 
 
 function CkSepoliaUSDC({ walletConnected, account }) {
   const [amount, setAmount] = useState(0);
   const [canisterDepositAddress, setCanisterDepositAddress] = useState("");
-  const [ckEthBalance, setCkEthBalance] = useState(null);
+  const [ckUSDCBalance, setCkUSDCBalance] = useState(null);
   const [isBalanceLoading, setIsBalanceLoading] = useState(false);
   const [generatedByte32Address, setGeneratedByte32Address] = useState("");
   const [balancePrincipalId, setBalancePrincipalId] = useState("");
   const [generatePrincipalId, setGeneratePrincipalId] = useState("");
   const [isGenerateLoading, setIsGenerateLoading] = useState(false);
+  const [ckSepoliaUSDCid, setSepoliaUSDCid] = useState("");
+  const [isDepositLoading, setIsDepositLoading] = useState(false);
+  const [isApproveLoading, setIsApproveLoading] = useState(false);
 
-  const depositAddress = async () => {
-    const depositAddress = await cketh_tutorial_backend.canister_deposit_principal();
-    console.log("Deposit Address: ", depositAddress);
-    setCanisterDepositAddress(depositAddress);
+  // SepoliaUSDC Address
+  const SepoliaUSDCAddress = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"; 
+  
+  // Use a standard ERC20 ABI
+  const erc20ABI = [
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_spender",
+          "type": "address"
+        },
+        {
+          "name": "_value",
+          "type": "uint256"
+        }
+      ],
+      "name": "approve",
+      "outputs": [
+        {
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "type": "function"
+    }
+  ];
+  
+  // Fetching ckSepoliaUSDC Canister ID
+  const ckSepoliaUSDCID = async () => {
+    const canisterID = await cketh_tutorial_backend.ck_sepolia_usdc_ledger_canister_id();
+    setSepoliaUSDCid(canisterID); 
   };
 
-  const depositckETH = async () => {
+  // Function for getting the deposit address
+  const depositAddress = async () => {
+    const depositAddress = await cketh_tutorial_backend.canister_deposit_principal();
+    setCanisterDepositAddress(depositAddress);
+  };
+  
+  // Function for approving the helper contract to spend Sepolia USDC
+  const approveSepoliaUSDC = async () => {
+    setIsApproveLoading(true);
+    try {
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const signer = provider.getSigner();
+      const contract = new ethers.Contract(SepoliaUSDCAddress, erc20ABI, signer);
+    
+      const tx = await contract.approve(MinterHelper.SepoliaUSDCHelper, ethers.utils.parseUnits(amount.toString(), 18));
+      toast.info("Approving helper contract to spend Sepolia USDC");
+      await tx.wait();
+      toast.success("Approval successful. You can now proceed with the deposit.");
+      console.log("Approval transaction data: ", tx);
+    } catch (error) {
+      toast.error("Approval failed");
+      console.error(error);
+    } finally {
+      setIsApproveLoading(false);
+    }
+  };
+  
+  // Function for calling the "deposit" function in the helper contract
+  const depositSepoliaUSDC = async () => {
     if (!walletConnected) {
       toast.error("Wallet not connected");
       return;
     }
-
+  
+    setIsDepositLoading(true);
     try {
+      // First, approve the helper contract to spend Sepolia USDC
+      await approveSepoliaUSDC();
+  
+      // Proceed with the deposit after approval
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const signer = provider.getSigner();
-      const contract = new ethers.Contract(MinterHelper.MinterHelper, abi, signer);
-
-      const tx = await contract.deposit(canisterDepositAddress, {
-        value: ethers.utils.parseEther(amount.toString())
-      });
-
-      toast.info("Sending ETH to the helper contract");
+      const contract = new ethers.Contract(MinterHelper.SepoliaUSDCHelper, abi, signer);
+  
+      const tx = await contract.deposit(SepoliaUSDCAddress, ethers.utils.parseUnits(amount.toString(), 18), canisterDepositAddress);
+  
+      toast.info("Depositing Sepolia USDC");
       await tx.wait();
-      toast.success("Transaction successful");
+      toast.success("Deposit successful");
+      console.log("Deposit transaction data: ", tx);
     } catch (error) {
-      toast.error("Failed to send ETH");
+      toast.error("Operation failed");
       console.error(error);
+    } finally {
+      setIsDepositLoading(false);
     }
   };
 
@@ -60,12 +124,12 @@ function CkSepoliaUSDC({ walletConnected, account }) {
     setCanisterDepositAddress(e.target.value);
   };
 
-  const checkCkEthBalance = async () => {
+  const checkCkUSDCBalance = async () => {
     try {
       setIsBalanceLoading(true);
       const principal = Principal.fromText(balancePrincipalId);
-      const balance = await cketh_tutorial_backend.balance(principal);
-      setCkEthBalance(balance.toString());
+      const balance = await cketh_tutorial_backend.check_ckusdc_balance(principal);
+      setCkUSDCBalance(balance.toString());
       toast.success("Balance fetched successfully");
     } catch (error) {
       toast.error("Failed to fetch balance");
@@ -91,13 +155,73 @@ function CkSepoliaUSDC({ walletConnected, account }) {
   };
 
   const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text).then(() => {
-      toast.success("Address copied to clipboard");
-    }).catch((error) => {
-      toast.error("Failed to copy address");
-      console.error(error);
-    });
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(() => {
+        toast.success("Copied to clipboard", {
+          position: "top-center",
+          autoClose: 3000,
+          hideProgressBar: true,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          style: { backgroundColor: '#007bff', color: '#fff' }
+        });
+      }).catch((error) => {
+        toast.error("Failed to copy", {
+          position: "top-center",
+          autoClose: 3000,
+          hideProgressBar: true,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+        });
+        console.error(error);
+      });
+    } else {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+          toast.success("Copied to clipboard", {
+            position: "top-center",
+            autoClose: 3000,
+            hideProgressBar: true,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+            style: { backgroundColor: '#007bff', color: '#fff' }
+          });
+        } else {
+          throw new Error("Copy command was unsuccessful");
+        }
+      } catch (err) {
+        toast.error("Failed to copy", {
+          position: "top-center",
+          autoClose: 3000,
+          hideProgressBar: true,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+        });
+        console.error(err);
+      }
+      document.body.removeChild(textArea);
+    }
   };
+
+  useEffect(() => {
+    ckSepoliaUSDCID();
+    depositAddress(); 
+  }, []);
 
   return (
     <div className='container'>
@@ -116,8 +240,13 @@ function CkSepoliaUSDC({ walletConnected, account }) {
         <div className='section-row'>
           <div className='section'>
             <h2>ckSepoliaUSDC Canister ID</h2>
-            {/* <button onClick={depositAddress} className='button'>Get Canister byte32 Address</button> */}
-            <div>{canisterDepositAddress}</div>
+            <div>
+              {ckSepoliaUSDCid}
+              <FaCopy
+                onClick={() => copyToClipboard(ckSepoliaUSDCid)}
+                style={{ cursor: 'pointer', marginLeft: '8px' }}
+              />
+            </div>
           </div>
 
           <div className='section'>
@@ -138,8 +267,8 @@ function CkSepoliaUSDC({ walletConnected, account }) {
                 placeholder="Amount"
                 className='input'
               />
-              <button onClick={depositckETH} className='button'>
-                Deposit ckSepoliaUSDC
+              <button onClick={depositSepoliaUSDC} disabled={isDepositLoading || isApproveLoading} className='button'>
+                {isDepositLoading ? 'Depositing ckSepoliaUSDC...' : 'Deposit ckSepoliaUSDC'}
               </button>
             </div>
           </div>
@@ -156,13 +285,13 @@ function CkSepoliaUSDC({ walletConnected, account }) {
                 placeholder="Principal ID"
                 className='input'
               />
-              <button onClick={checkCkEthBalance} disabled={isBalanceLoading} className='button'>
+              <button onClick={checkCkUSDCBalance} disabled={isBalanceLoading} className='button'>
                 {isBalanceLoading ? 'Checking...' : 'Check Balance'}
               </button>
             </div>
-            {ckEthBalance !== null && (
+            {ckUSDCBalance !== null && (
               <div className='balance-display'>
-                <p>ckETH Balance: {ckEthBalance}</p>
+                <p>ckSepoliaUSDC Balance: {ckUSDCBalance}</p>
               </div>
             )}
           </div>
@@ -183,10 +312,13 @@ function CkSepoliaUSDC({ walletConnected, account }) {
             </div>
             {generatedByte32Address && (
               <div className='address-display'>
-                <p>Generated Byte32 Address: {generatedByte32Address}</p>
-                <button onClick={() => copyToClipboard(generatedByte32Address)} className='button'>
-                  Copy Address
-                </button>
+                <p>
+                  Generated Byte32 Address: {generatedByte32Address}
+                  <FaCopy
+                    onClick={() => copyToClipboard(generatedByte32Address)}
+                    style={{ cursor: 'pointer', marginLeft: '8px' }}
+                  />
+                </p>
               </div>
             )}
           </div>
