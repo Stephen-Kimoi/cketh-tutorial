@@ -8,10 +8,35 @@ type ICRC1TransferError = variant {
   TooOld;
   InsufficientFunds : record { balance : nat };
 };
+type ICRC2ApproveError = variant {
+  GenericError : record { message : text; error_code : nat };
+  TemporarilyUnavailable;
+  Duplicate : record { duplicate_of : nat };
+  BadFee : record { expected_fee : nat };
+  AllowanceChanged : record { current_allowance : nat };
+  CreatedInFuture : record { ledger_time : nat64 };
+  TooOld;
+  Expired : record { ledger_time : nat64 };
+  InsufficientFunds : record { balance : nat };
+};
 type LogEntry = record { topics : vec text; address : text };
-type Result = variant { Ok : nat; Err : ICRC1TransferError };
-type Result_1 = variant { Ok : VerifiedTransactionDetails; Err : text };
+type RejectionCode = variant {
+  NoError;
+  CanisterError;
+  SysTransient;
+  DestinationInvalid;
+  Unknown;
+  SysFatal;
+  CanisterReject;
+};
+type Result = variant { Ok : nat; Err : ICRC2ApproveError };
+type Result_1 = variant { Ok : nat; Err : ICRC1TransferError };
 type Result_2 = variant { Ok : RetrieveEthRequest; Err : WithdrawalError };
+type Result_3 = variant { Ok : VerifiedTransactionDetails; Err : text };
+type Result_4 = variant {
+  Ok : RetrieveEthRequest;
+  Err : record { RejectionCode; text };
+};
 type RetrieveEthRequest = record { block_index : nat };
 type VerifiedTransactionDetails = record {
   to : text;
@@ -28,11 +53,19 @@ type WithdrawalError = variant {
   InsufficientFunds : record { balance : nat };
 };
 service : {
-  balance : (principal) -> (nat);
+  approve_cketh_burning : (principal, nat) -> (Result);
+  approve_usdc_burning : (principal, nat) -> (Result);
   canister_deposit_principal : () -> (text) query;
+  check_ckusdc_balance : (principal) -> (nat);
+  ck_sepolia_eth_balance : (principal) -> (nat);
+  ck_sepolia_eth_ledger_canister_id : () -> (text) query;
+  ck_sepolia_eth_minter_canister_id : () -> (text) query;
+  ck_sepolia_eth_transfer : (text, nat) -> (Result_1);
+  ck_sepolia_eth_withdraw : (nat, text) -> (Result_2);
+  ck_sepolia_usdc_index_canister_id : () -> (text) query;
+  ck_sepolia_usdc_ledger_canister_id : () -> (text) query;
   convert_principal_to_byte32 : (principal) -> (text) query;
   get_receipt : (text) -> (text);
-  transfer : (text, nat) -> (Result);
-  verify_transaction : (text) -> (Result_1);
-  withdraw : (nat, text) -> (Result_2);
+  verify_transaction : (text) -> (Result_3);
+  withdraw_ckusdc_to_ethereum : (nat, text) -> (Result_4);
 }

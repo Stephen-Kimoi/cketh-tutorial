@@ -1,22 +1,22 @@
 use b3_utils::{vec_to_hex_string_with_0x, Subaccount}; 
-use b3_utils::caller_is_controller;
-use b3_utils::ledger::{ICRCAccount, ICRC1, ICRC1TransferArgs, ICRC1TransferResult};
-use b3_utils::api::{InterCall, CallCycles}; 
+use b3_utils::ledger::ICRC1TransferResult;
 use evm_rpc_canister_types::{
     EthSepoliaService, EvmRpcCanister, GetTransactionReceiptResult, MultiGetTransactionReceiptResult, RpcServices
 };
 use candid::{Nat, Principal};
+use b3_utils::ledger::ICRC2ApproveResult;
+use ic_cdk::api::call::CallResult;
 
 mod receipt;
 mod minter;
+mod canister_id;
+mod ck_sepolia_eth;
+mod ck_sepolia_usdc;
+mod withdraw;
 
 pub const EVM_RPC_CANISTER_ID: Principal =
   Principal::from_slice(b"\x00\x00\x00\x00\x02\x30\x00\xCC\x01\x01"); // 7hfb6-caaaa-aaaar-qadga-cai
 pub const EVM_RPC: EvmRpcCanister = EvmRpcCanister(EVM_RPC_CANISTER_ID);
-
-const MINTER_ADDRESS: &str = "0xb44b5e756a894775fc32eddf3314bb1b1944dc34";  // Minter address for ckSepoliaETH
-const LEDGER: &str = "apia6-jaaaa-aaaar-qabma-cai";
-const MINTER: &str = "jzenf-aiaaa-aaaar-qaa7q-cai";
 
 impl From<GetTransactionReceiptResult> for receipt::ReceiptWrapper {
     fn from(result: GetTransactionReceiptResult) -> Self {
@@ -92,7 +92,7 @@ async fn verify_transaction(hash: String) -> Result<receipt::VerifiedTransaction
     }
 
     // Verify the 'to' address matches the minter address
-    if receipt_data.to != MINTER_ADDRESS {
+    if receipt_data.to != canister_id::CK_SEPOLIA_ETH_MINTER_ADDRESS {
         return Err("Minter address does not match".to_string());
     }
 
@@ -138,49 +138,6 @@ async fn eth_get_transaction_receipt(hash: String) -> Result<GetTransactionRecei
         },
         Err(e) => Err(format!("Error calling EVM_RPC: {}", e)),
     }    
-}
-
-// Fetching canister's balance of ckETH
-#[ic_cdk::update]
-async fn balance(principal_id: Principal) -> Nat {
-    let account = ICRCAccount::new(principal_id, None);
-
-    ICRC1::from(LEDGER).balance_of(account).await.unwrap()
-}
-
-// Transfering a specified amount of ckETH to another account 
-#[ic_cdk::update]
-async fn transfer(to: String, amount: Nat) -> ICRC1TransferResult {
-    let to = ICRCAccount::from_text(&to).unwrap(); 
-    
-    let transfer_args = ICRC1TransferArgs {
-        to, 
-        amount, 
-        from_subaccount: None, 
-        fee: None, 
-        memo: None, 
-        created_at_time: None, 
-    }; 
-
-    ICRC1::from(LEDGER).transfer(transfer_args).await.unwrap()
-}
-
-// Withdrawing ckETH from the canister
-#[ic_cdk::update(guard = "caller_is_controller")]
-async fn withdraw(amount: Nat, recipient: String) -> minter::WithdrawalResult {
-    let withdraw = minter::WithdrawalArg{ 
-        amount, 
-        recipient
-    }; 
-    
-    InterCall::from(MINTER)
-    .call(
-        "withdraw_eth", 
-        withdraw, 
-        CallCycles::NoPay
-    )
-    .await
-    .unwrap()
 }
 
 ic_cdk::export_candid!();

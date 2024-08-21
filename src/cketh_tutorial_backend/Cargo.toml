@@ -21,3 +21,4 @@ serde = { version = "1", features = ["derive"] }
 hex = "0.4.3"
 num-bigint = "0.4.6"
 num-traits = "0.2.19"
+icrc-ledger-types = "0.1.6"

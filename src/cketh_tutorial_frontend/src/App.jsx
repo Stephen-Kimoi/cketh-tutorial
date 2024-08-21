@@ -51,25 +51,25 @@ function App() {
           className={activeComponent === "CkSepoliaETH" ? "active" : ""}
           onClick={() => setActiveComponent("CkSepoliaETH")}
         >
-          CkSepoliaETH
+          ckSepoliaETH
         </button>
         <button
           className={activeComponent === "CkETH" ? "active" : ""}
           onClick={() => setActiveComponent("CkETH")}
         >
-          CkETH
+          ckETH
         </button>
         <button
           className={activeComponent === "CkUSDC" ? "active" : ""}
           onClick={() => setActiveComponent("CkUSDC")}
         >
-          CkUSDC
+          ckUSDC
         </button>
         <button
           className={activeComponent === "CkSepoliaUSDC" ? "active" : ""}
           onClick={() => setActiveComponent("CkSepoliaUSDC")}
         >
-          CkSepoliaUSDC
+          ckSepoliaUSDC
         </button>
       </div>
 
