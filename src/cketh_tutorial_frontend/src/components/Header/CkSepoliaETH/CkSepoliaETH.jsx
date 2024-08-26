@@ -11,7 +11,8 @@ import 'react-toastify/dist/ReactToastify.css';
 
 function CkSepoliaETH({ walletConnected, account }) {
   const [amount, setAmount] = useState(0);
-  const [ckSepoliaETHid, setkSepoliaETHid] = useState("");
+  const [ckSepoliaETHLedgerid, setkSepoliaETHLedgerid] = useState("");
+  const [ckSepoliaETHMInterid, setkSepoliaETHMinterid] = useState("");
   const [ckEthBalance, setCkEthBalance] = useState(null);
   const [isBalanceLoading, setIsBalanceLoading] = useState(false);
   const [generatedByte32Address, setGeneratedByte32Address] = useState("");
@@ -25,10 +26,16 @@ function CkSepoliaETH({ walletConnected, account }) {
   const [isReceiptLoading, setIsReceiptLoading] = useState(false);
 
   // Fetching ckSepoliaETH Canister ID
-  const ckSepoliaETHID = async () => {
-    const canisterID = await cketh_tutorial_backend.ck_sepolia_eth_ledger_canister_id();
-    setkSepoliaETHid(canisterID);
+  const ckSepoliaCanisterIDs = async () => {
+    const ledgerCanisterID = await cketh_tutorial_backend.ck_sepolia_eth_ledger_canister_id();
+    setkSepoliaETHLedgerid(ledgerCanisterID); 
+
+    const minterCanisterID = await cketh_tutorial_backend.ck_sepolia_eth_minter_canister_id(); 
+    setkSepoliaETHMinterid(minterCanisterID); 
   };
+
+  // Fetching ckSepoliaETH Minter Canister ID: 
+
 
   // Function for getting the deposit address
   const depositAddress = async () => {
@@ -200,7 +207,7 @@ function CkSepoliaETH({ walletConnected, account }) {
   };
 
   useEffect(() => {
-    ckSepoliaETHID();
+    ckSepoliaCanisterIDs();
     depositAddress();
     fetchTransactionHashes();
   }, []);
@@ -221,11 +228,17 @@ function CkSepoliaETH({ walletConnected, account }) {
       <div className='sections-container'>
         <div className='section-row'>
           <div className='section'>
-            <h2>ckSepoliaETH Canister ID</h2>
+            <h2>ckSepoliaETH Canister IDs</h2>
             <div>
-              {ckSepoliaETHid}
+              <b><i>Ledger ID:</i></b> {ckSepoliaETHLedgerid}
               <FaCopy
-                onClick={() => copyToClipboard(ckSepoliaETHid)}
+                onClick={() => copyToClipboard(ckSepoliaETHLedgerid)}
+                style={{ cursor: 'pointer', marginLeft: '8px' }}
+              />
+
+              <b><i>Minter ID:</i></b> {ckSepoliaETHMInterid}
+              <FaCopy
+                onClick={() => copyToClipboard(ckSepoliaETHMInterid)}
                 style={{ cursor: 'pointer', marginLeft: '8px' }}
               />
             </div>

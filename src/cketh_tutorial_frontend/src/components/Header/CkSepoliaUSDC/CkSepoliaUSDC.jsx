@@ -18,7 +18,8 @@ function CkSepoliaUSDC({ walletConnected, account }) {
   const [balancePrincipalId, setBalancePrincipalId] = useState("");
   const [generatePrincipalId, setGeneratePrincipalId] = useState("");
   const [isGenerateLoading, setIsGenerateLoading] = useState(false);
-  const [ckSepoliaUSDCid, setSepoliaUSDCid] = useState("");
+  const [ckSepoliaUSDCLedgerid, setSepoliaUSDCLedgerid] = useState("");
+  const [ckSepoliaUSDCMinterid, setSepoliaUSDCMinterid] = useState("");
   const [isDepositLoading, setIsDepositLoading] = useState(false);
   const [isApproveLoading, setIsApproveLoading] = useState(false);
   const [transactionHashes, setTransactionHashes] = useState([]);
@@ -55,8 +56,11 @@ function CkSepoliaUSDC({ walletConnected, account }) {
   
   // Fetching ckSepoliaUSDC Canister ID
   const ckSepoliaUSDCID = async () => {
-    const canisterID = await cketh_tutorial_backend.ck_sepolia_usdc_ledger_canister_id();
-    setSepoliaUSDCid(canisterID); 
+    const ledgerCanisterID = await cketh_tutorial_backend.ck_sepolia_usdc_ledger_canister_id();
+    setSepoliaUSDCLedgerid(ledgerCanisterID); 
+
+    const minterCanisterID = await cketh_tutorial_backend.ck_sepolia_eth_minter_canister_id();
+    setSepoliaUSDCMinterid(minterCanisterID); 
   };
 
   // Function for getting the deposit address
@@ -281,9 +285,15 @@ function CkSepoliaUSDC({ walletConnected, account }) {
           <div className='section'>
             <h2>ckSepoliaUSDC Canister ID</h2>
             <div>
-              {ckSepoliaUSDCid}
+              <b><i>Ledger ID:</i></b> {ckSepoliaUSDCLedgerid}
               <FaCopy
-                onClick={() => copyToClipboard(ckSepoliaUSDCid)}
+                onClick={() => copyToClipboard(ckSepoliaUSDCLedgerid)}
+                style={{ cursor: 'pointer', marginLeft: '8px' }}
+              />
+
+              <b><i>Minter ID:</i></b> {ckSepoliaUSDCMinterid}
+              <FaCopy
+                onClick={() => copyToClipboard(ckSepoliaUSDCMinterid)}
                 style={{ cursor: 'pointer', marginLeft: '8px' }}
               />
             </div>
