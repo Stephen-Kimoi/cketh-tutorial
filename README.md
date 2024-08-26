@@ -428,3 +428,5 @@ This project is licensed under the MIT license, see LICENSE.md for details. See 
 - Chain Key Tokens overview - [Link](https://internetcomputer.org/docs/current/developer-docs/multi-chain/chain-key-tokens/overview)
 - ckETH Documentation - [Link](https://internetcomputer.org/docs/current/developer-docs/multi-chain/chain-key-tokens/cketh/overview)
 - ckETH Ledger Documentation - [Link](https://github.com/dfinity/ic/tree/master/rs/ethereum/cketh/mainnet#installing-the-ledger)
+- ckSepoliaETH Dashaboard - [Link](https://dashboard.internetcomputer.org/sepoliaeth)
+- ckETH Dashboard - [Link](https://dashboard.internetcomputer.org/ethereum)
