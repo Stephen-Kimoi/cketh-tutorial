@@ -4,10 +4,10 @@ This tutorial will guide you through the process of working with ckETH, from gen
 
 Slides on ckETH explanation can be found [here](https://www.canva.com/design/DAGNHEG_n-Y/Z8vo3oZsTnxMINLBlyizYw/edit)
 
-## Testing the ckETH Minter: 
+## ckTokens Minter: 
 You can now easily mint ckSepoliaETH to your principal ID using this site - [Link](https://lqsjp-paaaa-aaaal-qjpsq-cai.icp0.io/) 
 
-![ckETH Minter](minter.png)
+![ckTokens Minter](minter.png)
 
 ```bash
 Here are the steps: 
@@ -28,173 +28,191 @@ Before we begin, ensure you have the following:
 - [MetaMask installed in your browser](https://metamask.io/download/) with [Sepolia ETH (testnet) tokens](https://www.alchemy.com/faucets/ethereum-sepolia)
 - Basic knowledge oF rust
 
-## Install project template
-I have created a simple template that comes with the configurations for calling the heloper smart contract on Ethereum, this allows you to only focus on the backend logic for intergrating ckETH
-
-Here's the [link to the repo](https://github.com/Stephen-Kimoi/starter-template)
-
-![alt text](UI.png)
-
-## Step 0(a): Setting Up the Project
-Clone the project template from the link provided above. 
-
-```bash
-git clone https://github.com/Stephen-Kimoi/starter-template.git
-```
-
-```bash 
-cd starter-template && npm install
-```
-
-Give permissions to the script
-```bash 
-chmod +x ./did.sh
-```
-
-Start the local replica for dfx 
-```bash
-dfx start --clean --background
-```
-
-Deploy the backend canister
-```bash
-./did.sh && dfx generate cketh_starter_backend && dfx deploy cketh_starter_backend
-```
-
-Start the frontend 
-```bash 
-npm run start 
-```
-
 ## Step 0(b): Understanding the frontend logic
+The frontend logic for ``ckSepoliaETH`` is located in the 
+```
+_src
+    ...
+    | 
+    |_cketh_tutorial_frontend
+      |_components 
+        |_Header
+          ...
+          |_ckSepoliaETH
+          ...
+```
 
-## 1. `depositAddress`
+## 1. ckSepoliaCanisterIDs
 
 ### Description
-The `depositAddress` function is responsible for retrieving a unique deposit address from the backend canister on the Internet Computer. This address is where the user will send their Ethereum deposit.
+This function retrieves the Ledger and Minter canister IDs for ckSepoliaETH from the backend canister on the Internet Computer.
 
 ### Usage
-- **Purpose**: Fetches and sets the deposit address in the `canisterDepositAddress` state.
-- **Called When**: The user clicks the "Get Deposit Address" button.
+- **Purpose**: Fetches and sets the Ledger and Minter canister IDs for ckSepoliaETH.
+- **Called When**: Automatically called when the component is mounted.
+
+### Code Example
+```javascript
+const ckSepoliaCanisterIDs = async () => {
+  const ledgerCanisterID = await cketh_tutorial_backend.ck_sepolia_eth_ledger_canister_id();
+  setkSepoliaETHLedgerid(ledgerCanisterID);
+
+  const minterCanisterID = await cketh_tutorial_backend.ck_sepolia_eth_minter_canister_id();
+  setkSepoliaETHMinterid(minterCanisterID);
+};
+```
+
+### Key Points
+- **Async Operation**: Retrieves canister IDs asynchronously.
+- **State Management**: Updates `ckSepoliaETHLedgerid` and `ckSepoliaETHMinterid` states.
+
+---
+
+## 2. depositAddress
+
+### Description
+Fetches a unique deposit address from the backend canister on the Internet Computer, used for Ethereum deposits.
+
+### Usage
+- **Purpose**: Retrieves and sets the deposit address in the `canisterDepositAddress` state.
+- **Called When**: Automatically called when the component is mounted.
 
 ### Code Example
 ```javascript
 const depositAddress = async () => {
-  const depositAddress = await cketh_starter_backend.canister_deposit_principal();
-  console.log("Deposit Address: ", depositAddress);
+  const depositAddress = await cketh_tutorial_backend.canister_deposit_principal();
+  console.log("Deposit address: ", depositAddress);
   setCanisterDepositAddress(depositAddress);
 };
 ```
 
 ### Key Points
-- **Async Operation**: The function is asynchronous, ensuring that the deposit address is retrieved properly before updating the state.
-- **State Update**: After fetching the address, it updates the `canisterDepositAddress` state to make it available for subsequent transactions.
+- **Async Operation**: Ensures that the deposit address is retrieved before updating the state.
+- **State Update**: Updates the `canisterDepositAddress` state.
 
-## 2. `write`
+---
+
+## 3. depositckETH
 
 ### Description
-The `write` function interacts with the `MinterHelper` smart contract on Ethereum to execute the `deposit` method. This method sends the specified amount of Ethereum to the deposit address.
+Interacts with the MinterHelper smart contract on Ethereum to deposit the specified amount of Ethereum to the deposit address.
 
 ### Usage
-- **Purpose**: Initiates a transaction to deposit Ethereum into the deposit address.
-- **Called When**: The user clicks the "Deposit" button.
+- **Purpose**: Executes the deposit transaction and stores the transaction hash.
+- **Called When**: The user clicks the "Deposit ckSepoliaETH" button.
 
 ### Code Example
 ```javascript
-const { write, data, isLoading: isWriteLoading } = useContractWrite({
-  address: contractAddress,
-  abi: abi,
-  functionName: "deposit",
-  value: parseEther(amount.toString()),
-  args: [canisterDepositAddress],
-  onSuccess(data) {
-    toast.info("Sending ETH to the helper contract");
-  },
-  onError(error) {
-    toast.error("Failed to send ETH");
-    console.error(error);
-  }
-});
+const depositckETH = async () => {
+    if (!walletConnected) {
+      toast.error("Wallet not connected");
+      return;
+    }
+
+    setIsDepositLoading(true);
+    try {
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const signer = provider.getSigner();
+      const contract = new ethers.Contract(MinterHelper.SepoliaETHMinterHelper, abi, signer);
+
+      const tx = await contract.deposit(canisterDepositAddress, {
+        value: ethers.utils.parseEther(amount.toString())
+      });
+
+      toast.info("Sending ETH to the helper contract");
+      await tx.wait();
+      toast.success("Transaction successful");
+
+      // Store transaction hash
+      toast.info("Storing transaction hash...");
+      await cketh_tutorial_backend.store_ck_sepolia_eth_hash(tx.hash);
+      toast.success("Transaction hash stored");
+
+      // Fetch updated transaction hashes
+      fetchTransactionHashes();
+    } catch (error) {
+      toast.error("Failed to send ETH");
+      console.error(error);
+    } finally {
+      setIsDepositLoading(false);
+    }
+  };
 ```
 
 ### Key Points
-- **Parameters**: Sends the Ethereum amount and deposit address as arguments to the `deposit` function in the smart contract.
-- **Notification**: Provides user feedback through toast notifications upon success or error.
-- **Loading State**: Manages the loading state with `isWriteLoading` to disable inputs and buttons during the transaction.
+- **Wallet Check**: Verifies if the wallet is connected.
+- **Transaction Execution**: Sends ETH to the contract and stores the transaction hash on success.
+- **State Management**: Manages loading state with `isDepositLoading`.
 
-## 3. `useWaitForTransaction`
+---
+
+## 4. fetchTransactionHashes
 
 ### Description
-The `useWaitForTransaction` hook monitors the status of the Ethereum transaction initiated by the `write` function. Once the transaction is confirmed, it triggers the `verifyTransaction` function.
+Fetches and displays the list of stored transaction hashes.
 
 ### Usage
-- **Purpose**: Waits for transaction confirmation and initiates verification.
-- **Called When**: Automatically triggered after a transaction hash is generated.
+- **Purpose**: Retrieves stored transaction hashes for ckSepoliaETH.
+- **Called When**: Automatically called when the component is mounted and after a successful deposit.
 
 ### Code Example
 ```javascript
-const { isLoading: isTxLoading } = useWaitForTransaction({
-  hash: data?.hash,
-  onSuccess() {
-    toast.info("Verifying the transaction on-chain");
-    verifyTransaction(data.hash);
-  },
-  onError(error) {
-    toast.error("Transaction failed or rejected");
-    console.error(error);
-  }
-});
+const fetchTransactionHashes = async () => {
+    try {
+      const hashes = await cketh_tutorial_backend.get_ck_sepolia_eth_hashes();
+      setTransactionHashes(hashes);
+    } catch (error) {
+      toast.error("Failed to fetch transaction hashes");
+      console.error(error);
+    }
+};
 ```
 
 ### Key Points
-- **Transaction Monitoring**: It checks the transaction status using its hash.
-- **Verification Trigger**: On success, it calls the `verifyTransaction` function to validate the transaction on-chain.
+- **Async Operation**: Fetches transaction hashes from the backend.
+- **State Update**: Updates the `transactionHashes` state.
 
-## 4. `verifyTransaction`
+---
+
+## 5. getReceipt
 
 ### Description
-The `verifyTransaction` function verifies a transaction on the Ethereum blockchain by interacting with the backend canister on the Internet Computer.
+Retrieves the receipt of a specific Ethereum transaction using its hash.
 
 ### Usage
-- **Purpose**: Verifies the transaction using its hash and retrieves the result.
-- **Called When**: 
-  - Automatically after a transaction is confirmed.
-  - Manually when the user inputs a transaction hash and clicks the "Verify Transaction" button.
+- **Purpose**: Fetches and displays the transaction receipt.
+- **Called When**: The user clicks on a transaction hash in the transaction list.
 
 ### Code Example
 ```javascript
-const verifyTransaction = async (hash) => {
-  setIsVerifying(true); // Start loading
-  setVerificationError(null); // Reset error state
-
+const getReceipt = async (hash) => {
+  setIsReceiptLoading(true);
   try {
-    const result = await cketh_starter_backend.verify_transaction(hash);
-    setVerificationResult(result); // Store the verification result
-    toast.success("Transaction verified successfully");
+    const receipt = await cketh_tutorial_backend.get_receipt(hash);
+    setSelectedReceipt(receipt);
   } catch (error) {
-    setVerificationError("Verification failed. Please check the transaction hash and try again.");
-    toast.error("Verification failed");
+    toast.error("Failed to fetch transaction receipt");
     console.error(error);
   } finally {
-    setIsVerifying(false); // Stop loading
+    setIsReceiptLoading(false);
   }
 };
 ```
 
 ### Key Points
-- **Transaction Hash**: Takes the transaction hash as an argument.
-- **Async Operation**: This function is asynchronous and updates the UI based on success or failure.
-- **Error Handling**: Catches errors during the verification process and displays appropriate messages.
-- **State Management**: Updates `isVerifying`, `verificationResult`, and `verificationError` states to reflect the current status of the verification process.
+- **Receipt Fetching**: Fetches the receipt from the backend canister.
+- **State Management**: Updates `selectedReceipt` and `isReceiptLoading` states.
 
-## 5. `changeAmountHandler`
+---
+
+## 6. changeAmountHandler
 
 ### Description
-The `changeAmountHandler` function manages changes to the deposit amount input field, ensuring that only valid numerical values are accepted.
+Handles the change event for the amount input field, ensuring only valid numbers are accepted.
 
 ### Usage
-- **Purpose**: Updates the `amount` state based on user input.
-- **Called When**: The user types in the "Amount" input field.
+- **Purpose**: Updates the `amount` state.
+- **Called When**: The user inputs a value in the "Amount" field.
 
 ### Code Example
 ```javascript
@@ -206,48 +224,80 @@ const changeAmountHandler = (e) => {
 ```
 
 ### Key Points
-- **Input Validation**: Ensures that the input is a positive number or resets it to zero.
-- **State Update**: Directly updates the `amount` state based on user input.
+- **Input Validation**: Ensures the input is a valid positive number.
+- **State Update**: Updates the `amount` state.
 
-## 6. `changeAddressHandler`
+---
+
+## 7. checkCkEthBalance
 
 ### Description
-The `changeAddressHandler` function handles changes to the deposit address input field.
+Fetches and displays the ckSepoliaETH balance for a given Principal ID.
 
 ### Usage
-- **Purpose**: Updates the `canisterDepositAddress` state with the user's input.
-- **Called When**: The user types in the "Canister Deposit Address" input field.
+- **Purpose**: Checks the ckSepoliaETH balance on the Internet Computer.
+- **Called When**: The user clicks the "Check Balance" button.
 
 ### Code Example
 ```javascript
-const changeAddressHandler = (e) => {
-  setCanisterDepositAddress(e.target.value);
+const checkCkEthBalance = async () => {
+  try {
+    setIsBalanceLoading(true);
+    const principal = Principal.fromText(balancePrincipalId);
+    const balance = await cketh_tutorial_backend.ck_sepolia_eth_balance(principal);
+    setCkEthBalance(balance.toString());
+    toast.success("Balance fetched successfully");
+  } catch (error) {
+    toast.error("Failed to fetch balance");
+    console.error(error);
+  } finally {
+    setIsBalanceLoading(false);
+  }
 };
 ```
 
 ### Key Points
-- **State Update**: Directly updates the `canisterDepositAddress` state with the new input value.
+- **Balance Retrieval**: Fetches the balance using the Principal ID.
+- **State Management**: Manages `isBalanceLoading` and `ckEthBalance` states.
 
-## 7. `changeTransactionHashHandler`
+---
+
+## 8. generateByte32Address
 
 ### Description
-The `changeTransactionHashHandler` function manages changes to the transaction hash input field.
+Generates a Byte32 address from a given Principal ID.
 
 ### Usage
-- **Purpose**: Updates the `transactionHash` state with the user-provided hash.
-- **Called When**: The user types in the "Transaction Hash" input field.
+- **Purpose**: Converts a Principal ID into a Byte32 address.
+- **Called When**: The user clicks the "Generate Byte32 Address" button.
 
 ### Code Example
 ```javascript
-const changeTransactionHashHandler = (e) => {
-  setTransactionHash(e.target.value);
+const generateByte32Address = async () => {
+    try {
+      setIsGenerateLoading(true);
+      const principal = Principal.fromText(generatePrincipalId);
+      const byte32Address = await cketh_tutorial_backend.convert_principal_to_byte32(principal);
+      setGeneratedByte32Address(byte32Address);
+      toast.success("Byte32 address generated successfully");
+    } catch (error) {
+      toast.error("Failed to generate byte32 address");
+      console.error(error);
+    } finally {
+      setIsGenerateLoading(false);
+    }
 };
 ```
 
 ### Key Points
-- **State Update**: Directly updates the `transactionHash` state with the new hash value.
+- **Byte32 Generation**: Converts Principal ID to Byte32.
+- **State Management**: Manages `isGenerateLoading` and `generatedByte32Address` states.
 
-## Step 1: Generating a Subaccount from a Principal ID
+<!-- --- -->
+
+## Backend Logic
+
+### Function 1: Generating a Subaccount from a Principal ID
 
 The first step is to create a function that converts a Principal ID into a subaccount. This subaccount is necessary for depositing ETH.
 
@@ -274,269 +324,8 @@ fn canister_deposit_principal() -> String {
 
 This function generates a deposit address that you can use to mint ckETH to the new subaccount.
 
-You can now test the function by calling the ``Get Deposit Address`` button on your frontend
 
-## Step 2: Minting ckETH Tokens
-
-Once you have the deposit principal, the next step is to mint ckETH tokens by calling the `deposit` function in the ckETH helper contract with the generated address as the argument.
-
-### Contract Information
-
-Inside the `_components/contracts` directory, you will find:
-
-- The contract address of the minter helper located at `contract-address.json`.
-- The ABI of the minter helper located at `MinterHelper.json`.
-
-### Frontend Code
-
-Here's how to integrate the deposit function in your frontend:
-
-```javascript
-import { useAccount, useContractWrite } from 'wagmi';
-import { parseEther } from 'viem';
-import { MinterHelper as contractAddress } from '../contracts/contracts-address.json';
-import abi from '../contracts/MinterHelper.json';
-import { toast } from 'react-toastify';
-
-function Header() {
-  const { address, isConnected } = useAccount();
-  const [amount, setAmount] = useState(0);
-  const [canisterDepositAddress, setCanisterDepositAddress] = useState("");
-
-  const depositAddress = async () => {
-    const depositAddress = await cketh_tutorial_backend.canister_deposit_principal();
-    setCanisterDepositAddress(depositAddress);
-  };
-
-  const { write, data, isLoading: isWriteLoading } = useContractWrite({
-    address: contractAddress,
-    abi: abi,
-    functionName: "deposit",
-    value: parseEther(amount.toString()),
-    args: [canisterDepositAddress],
-    onSuccess(data) {
-      toast.info("Sending ETH to the helper contract");
-    },
-    onError(error) {
-      toast.error("Failed to send ETH");
-      console.error(error);
-    }
-  });
-
-  return (
-    // Your JSX code for rendering the UI
-  );
-}
-```
-
-This code snippet allows users to connect their MetaMask wallet, input an amount, and click the "Deposit" button to mint ckETH to the generated principal address.
-
-## Step 3: Verifying the Transaction On-Chain
-
-After minting ckETH, it's crucial to verify the transaction on-chain. This involves checking several details:
-
-- The transaction status should be `1` (indicating success).
-- The `to` address must match the minter address.
-- The logs must include the correct deposit principal.
-
-### Backend Code
-Install the following packages in your ``cargo.toml`` file by copy pasting the follwing content: 
-```toml 
-serde = { version = "1", features = ["derive"] }
-serde_json = "1.0"
-```
-
-Copy the contents from the ``recept.rs`` file and paste them into a similar file on your directory 
-
-Then import the module in your ``lib.rs`` file like this: 
-```rust 
-mod receipt;
-```
-
-We then need to install the ``ic-evm-utils`` and ``evm-rpc-canister-types`` packages that allow us to interact with the EVM_RPC Canister 
-
-```toml 
-ic-evm-utils = "1.0.0"
-evm-rpc-canister-types = "1.0.0" 
-```
-
-Then add the ``evm_rpc`` canister to your ``dfx.json`` file: 
-
-```json 
-"evm_rpc": {
-      "type": "custom",
-      "candid": "https://github.com/internet-computer-protocol/evm-rpc-canister/releases/latest/download/evm_rpc.did",
-      "wasm": "https://github.com/internet-computer-protocol/evm-rpc-canister/releases/latest/download/evm_rpc.wasm.gz",
-      "remote": {
-      "id": {
-        "ic": "7hfb6-caaaa-aaaar-qadga-cai"
-      }
-      },
-      "specified_id": "7hfb6-caaaa-aaaar-qadga-cai",
-      "init_arg": "(record { nodesInSubnet = 28 })"
-    },
-```
-
-Import the required dependencies in your ``lib.rs`` file and instantiate your ``EVM_RPC`` canister:
-
-```rust 
-// Import required types
-use evm_rpc_canister_types::{
-    EthSepoliaService, EvmRpcCanister, GetTransactionReceiptResult, MultiGetTransactionReceiptResult, RpcServices
-};
-use candid::{Nat, Principal};
-
-// Initialize the canister
-pub const EVM_RPC_CANISTER_ID: Principal =
-  Principal::from_slice(b"\x00\x00\x00\x00\x02\x30\x00\xCC\x01\x01"); // 7hfb6-caaaa-aaaar-qadga-cai
-pub const EVM_RPC: EvmRpcCanister = EvmRpcCanister(EVM_RPC_CANISTER_ID);
-
-// Define the Minter address for ckSepoliaETH
-const MINTER_ADDRESS: &str = "0xb44b5e756a894775fc32eddf3314bb1b1944dc34"; 
-
-// Convert `GetTransactionReceiptResult` to`ReceiptWrapper`,for proper handling of the response 
-impl From<GetTransactionReceiptResult> for receipt::ReceiptWrapper {
-    fn from(result: GetTransactionReceiptResult) -> Self {
-        match result {
-            GetTransactionReceiptResult::Ok(receipt) => {
-                if let Some(receipt) = receipt {
-                    receipt::ReceiptWrapper::Ok(receipt::TransactionReceiptData {
-                        to: receipt.to,
-                        status: receipt.status.to_string(),
-                        transaction_hash: receipt.transactionHash,
-                        block_number: receipt.blockNumber.to_string(),
-                        from: receipt.from,
-                        logs: receipt.logs.into_iter().map(|log| receipt::LogEntry {
-                            address: log.address,
-                            topics: log.topics,
-                        }).collect(),
-                    })
-                } else {
-                    receipt::ReceiptWrapper::Err("Receipt is None".to_string())
-                }
-            },
-            GetTransactionReceiptResult::Err(e) => receipt::ReceiptWrapper::Err(format!("Error on Get transaction receipt result: {:?}", e)),
-        }
-    }
-} 
-```
-
-Create a new function  called ``eth_get_transaction_receipt``that is responsible for getting the transaction receipt the transaction hash
-
-```rust
-async fn eth_get_transaction_receipt(hash: String) -> Result<GetTransactionReceiptResult, String> {
-    // Make the call to the EVM_RPC canister
-    let result: Result<(MultiGetTransactionReceiptResult,), String> = EVM_RPC 
-        .eth_get_transaction_receipt(
-            RpcServices::EthSepolia(Some(vec![
-                EthSepoliaService::PublicNode,
-                EthSepoliaService::BlockPi,
-                EthSepoliaService::Ankr,
-            ])),
-            None, 
-            hash, 
-            10_000_000_000
-        )
-        .await 
-        .map_err(|e| format!("Failed to call eth_getTransactionReceipt: {:?}", e));
-
-    match result {
-        Ok((MultiGetTransactionReceiptResult::Consistent(receipt),)) => {
-            Ok(receipt)
-        },
-        Ok((MultiGetTransactionReceiptResult::Inconsistent(error),)) => {
-            Err(format!("EVM_RPC returned inconsistent results: {:?}", error))
-        },
-        Err(e) => Err(format!("Error calling EVM_RPC: {}", e)),
-    }    
-}
-```
- 
-Now, create a function to verify the transaction:
-
-```rust
-#[ic_cdk::update]
-async fn verify_transaction(hash: String) -> Result<receipt::VerifiedTransactionDetails, String> {
-    let receipt = match eth_get_transaction_receipt(hash.clone()).await {
-        Ok(receipt) => receipt,
-        Err(e) => return Err(format!("Failed to get receipt: {}", e)),
-    };
-
-    let receipt_data = match receipt {
-        GetTransactionReceiptResult::Ok(Some(data)) => data,
-        GetTransactionReceiptResult::Ok(None) => return Err("Receipt is None".to_string()),
-        GetTransactionReceiptResult::Err(e) => return Err(format!("Error on Get transaction receipt result: {:?}", e)),
-    };
-
-    let success_status = Nat::from(1u8);
-    if receipt_data.status != success_status {
-        return Err("Transaction failed".to_string());
-    }
-
-    if receipt_data.to != MINTER_ADDRESS {
-        return Err("Minter address does not match".to_string());
-    }
-
-    Ok(receipt::VerifiedTransactionDetails {
-        to: receipt_data.to.clone(),
-        status: receipt_data.status.to_string(),
-        transaction_hash: receipt_data.transactionHash.clone(),
-        block_number: receipt_data.blockNumber.to_string(),
-        from: receipt_data.from.clone(),
-        logs: receipt_data.logs.into_iter().map(|log| receipt::LogEntry {
-            address: log.address,
-            topics: log.topics,
-        }).collect(),
-    })
-}
-```
-
-When you're done with that you can redeploy all the canisters (including evm_rpc canister) locally by running the command 
-
-```bash 
-./did.sh && dfx generate cketh_starter_backend && dfx deploy evm_rpc && dfx deploy cketh_starter_backend
-```
-You can now call the button ``deposit`` on your frontend section to mint ckETH tokens to your backend principal ID
-
-### Frontend Code for Verification
-
-Add a section in your frontend to input a transaction hash and verify it:
-
-```javascript
-function Header() {
-  // Other states and functions...
-
-  const [transactionHash, setTransactionHash] = useState("");
-  const [verificationResult, setVerificationResult] = useState(null);
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [verificationError, setVerificationError] = useState(null);
-
-  const verifyTransaction = async (hash) => {
-    setIsVerifying(true);
-    setVerificationError(null);
-
-    try {
-      const result = await cketh_tutorial_backend.verify_transaction(hash);
-      setVerificationResult(result);
-      toast.success("Transaction verified successfully");
-    } catch (error) {
-      setVerificationError("Verification failed. Please check the transaction hash and try again.");
-      toast.error("Verification failed");
-      console.error(error);
-    } finally {
-      setIsVerifying(false);
-    }
-  };
-
-  return (
-    // Your JSX code for rendering the UI
-  );
-}
-```
-
-This allows users to verify the transaction by inputting the transaction hash.
-
-## Step 4: Fetching canister's ckETH balance and performing transfer functionalities
+## Function 2: Fetching canister's ckETH balance and performing transfer functionalities
 
 Import the following structs from the ``b3_utils::ledger`` and ``b3_utils::api`` dependencies:
 ```rust 
@@ -632,25 +421,10 @@ async fn withdraw(amount: Nat, recipient: String) -> minter::WithdrawalResult {
 }
 ```
 
-## Future Updates
+## License
+This project is licensed under the MIT license, see LICENSE.md for details. See CONTRIBUTE.md for details about how to contribute to this project. 
 
-We are continuously working on improving this project. Here are some exciting updates to look forward to:
-
-1. **Plugin Development**: We are in the process of converting this template into a plugin. This will make it even easier to integrate ckETH functionality into your existing projects.
-
-2. **Additional Features**: We plan to add more features to enhance the functionality of the ckETH integration. These may include:
-    - Advanced transaction monitoring
-    - Enhanced error handling and recovery mechanisms
-    - Integration with additional Ethereum networks
-    - Improved user interface for better transaction management
-
-3. **Documentation and Tutorials**: We will be expanding our documentation and creating more in-depth tutorials to cover advanced use cases and best practices.
-
-4. **Community Contributions**: We encourage community involvement and will be setting up contribution guidelines for those who want to help improve and expand this project.
-
-Stay tuned for these updates, and feel free to star and watch the repository for the latest developments!
-
-
-## Conclusion
-
-You have now successfully created a ckETH integration with Rust and React, including depositing ETH, minting ckETH, and verifying the transaction on-chain. This tutorial provides a solid foundation for working with ckETH and can be expanded to include more features as needed.
+## References: 
+- Chain Key Tokens overview - [Link](https://internetcomputer.org/docs/current/developer-docs/multi-chain/chain-key-tokens/overview)
+- ckETH Documentation - [Link](https://internetcomputer.org/docs/current/developer-docs/multi-chain/chain-key-tokens/cketh/overview)
+- ckETH Ledger Documentation - [Link](https://github.com/dfinity/ic/tree/master/rs/ethereum/cketh/mainnet#installing-the-ledger)
